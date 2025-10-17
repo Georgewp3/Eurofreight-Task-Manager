@@ -185,11 +185,13 @@ def create_app():
         filepath = os.path.join(os.path.dirname(__file__), filename)
 
         logs = LogEntry.query.order_by(LogEntry.timestamp.asc()).all()
+        cy = ZoneInfo("Europe/Nicosia")  # Cyprus time
+
         with open(filepath, "w", newline="", encoding="utf-8") as f:
             writer = csv.writer(f)
             writer.writerow(["User", "Project", "Task", "Status", "Timestamp (UTC)", "Comment"])
             for row in logs:
-                ts_local = row.timestampp.replace(tzinfo=ZoneInfo("UTC")).astimezone(cy_time)
+                ts_local = row.timestamp.replace(tzinfo=ZoneInfo("UTC")).astimezone(cy)
                 writer.writerow([
                 row.user_name,
                 row.project,
