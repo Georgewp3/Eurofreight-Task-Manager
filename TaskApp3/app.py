@@ -23,6 +23,17 @@ def create_app():
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
     app.config["SECRET_KEY"] = os.getenv("SECRET_KEY", "change-me-dev-key")
     db.init_app(app)
+        # Jinja filter: show timestamps in Cyprus time (Europe/Nicosia)
+    def cy_time(dt):
+        if not dt:
+            return ""
+        return (
+            dt.replace(tzinfo=ZoneInfo("UTC"))
+              .astimezone(ZoneInfo("Europe/Nicosia"))
+              .strftime("%d/%m/%Y %H:%M:%S")
+        )
+    app.jinja_env.filters["cy_time"] = cy_time
+
 
     with app.app_context():
         db.create_all()
