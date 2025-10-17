@@ -1,47 +1,101 @@
 {% extends "base.html" %}
 {% block content %}
-<h1 class="page-title">User Entries</h1>
+<div class="page-hero">
+  <h1>User Entries</h1>
+  <p class="subtitle">Pick your name, choose a task, set the status, and (optionally) leave a note.</p>
+</div>
 
-<div class="grid two">
-  <section class="card">
-    <h2>Step 1 — Select User</h2>
-    <select id="userSelect">
-      <option value="">— choose user —</option>
-      {% for u in users %}
-      <option value="{{u.id}}">{{u.full_name}}</option>
-      {% endfor %}
-    </select>
-  </section>
+<div class="modern-form">
+  <!-- STEP 1 -->
+  <div class="step-card">
+    <div class="step-head">
+      <span class="step-dot">1</span>
+      <div>
+        <h3>Select User</h3>
+        <p class="muted">Start by choosing your name</p>
+      </div>
+    </div>
+    <div class="field">
+      <label for="userSelect">User</label>
+      <div class="select-wrap">
+        <select id="userSelect">
+          <option value="">— choose user —</option>
+          {% for u in users %}
+          <option value="{{u.id}}">{{u.full_name}}</option>
+          {% endfor %}
+        </select>
+      </div>
+    </div>
+  </div>
 
-  <section class="card">
-    <h2>Step 2 — Select Task</h2>
-    <select id="taskSelect" disabled>
-      <option value="">— choose task —</option>
-    </select>
-  </section>
+  <!-- STEP 2 -->
+  <div class="step-card">
+    <div class="step-head">
+      <span class="step-dot">2</span>
+      <div>
+        <h3>Select Task</h3>
+        <p class="muted">Your assigned tasks will appear here</p>
+      </div>
+    </div>
+    <div class="field">
+      <label for="taskSelect">Task</label>
+      <div class="select-wrap">
+        <select id="taskSelect" disabled>
+          <option value="">— choose task —</option>
+        </select>
+      </div>
+      <div id="emptyTasks" class="empty-state" style="display:none">
+        <div class="empty-icon">🗒️</div>
+        <p>No tasks yet for this user.</p>
+      </div>
+    </div>
+  </div>
 
-  <section class="card">
-    <h2>Step 3 — Task Status</h2>
-    <select id="statusSelect" disabled>
+  <!-- STEP 3 -->
+  <div class="step-card">
+    <div class="step-head">
+      <span class="step-dot">3</span>
+      <div>
+        <h3>Status</h3>
+        <p class="muted">Mark done or not done</p>
+      </div>
+    </div>
+    <!-- Keep the original select (for form submission) but hide it; we’ll control it via segmented buttons -->
+    <select id="statusSelect" style="display:none">
       <option value="">— choose status —</option>
       <option value="COMPLETED">Done</option>
       <option value="NOT_COMPLETED">Not done</option>
     </select>
-  </section>
 
-  <section class="card">
-    <h2>Step 4 — Optional Comment</h2>
-    <textarea id="comment" placeholder="Reason (optional)"></textarea>
-  </section>
+    <div class="segmented" role="group" aria-label="Task status">
+      <button type="button" data-status="COMPLETED" class="seg-btn">Done</button>
+      <button type="button" data-status="NOT_COMPLETED" class="seg-btn">Not done</button>
+    </div>
+  </div>
+
+  <!-- STEP 4 -->
+  <div class="step-card">
+    <div class="step-head">
+      <span class="step-dot">4</span>
+      <div>
+        <h3>Optional Comment</h3>
+        <p class="muted">Add a reason if not completed</p>
+      </div>
+    </div>
+    <div class="field">
+      <label for="comment">Comment</label>
+      <textarea id="comment" placeholder="e.g., Waiting on info from client…"></textarea>
+    </div>
+  </div>
+
+  <!-- Sticky submit -->
+  <form id="entryForm" class="sticky-cta" method="post" action="{{ url_for('submit_entry') }}">
+    <input type="hidden" name="user_id" id="f_user_id">
+    <input type="hidden" name="task_id" id="f_task_id">
+    <input type="hidden" name="status" id="f_status">
+    <input type="hidden" name="comment" id="f_comment">
+    <button class="primary large" id="submitBtn" disabled>Submit Entry</button>
+    <div class="cta-hint muted">Tasks auto-refresh every 8s while a user is selected.</div>
+  </form>
 </div>
-
-<form id="entryForm" class="actions" method="post" action="{{ url_for('submit_entry') }}">
-  <input type="hidden" name="user_id" id="f_user_id">
-  <input type="hidden" name="task_id" id="f_task_id">
-  <input type="hidden" name="status" id="f_status">
-  <input type="hidden" name="comment" id="f_comment">
-  <button class="primary" id="submitBtn" disabled>Submit Entry</button>
-</form>
-
-<p class="muted">Tip: tasks auto-refresh every 8 seconds while a user is selected.</p>
 {% endblock %}

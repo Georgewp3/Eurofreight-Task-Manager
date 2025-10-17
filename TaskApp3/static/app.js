@@ -52,3 +52,40 @@ setInterval(()=>{
     loadTasksFor(userSelect.value);
   }
 }, 8000);
+
+// --- Modern User page helpers ---
+
+// Segmented buttons -> sync to hidden statusSelect
+const seg = document.querySelector(".segmented");
+if (seg && statusSelect) {
+  seg.querySelectorAll(".seg-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      seg.querySelectorAll(".seg-btn").forEach(b => b.classList.remove("selected"));
+      btn.classList.add("selected");
+      statusSelect.value = btn.dataset.status;
+      updateSubmitState();
+    });
+  });
+}
+
+// Empty state when no tasks
+const emptyTasks = document.getElementById("emptyTasks");
+async function loadTasksFor(userId){
+  if(!userId){ 
+    taskSelect.innerHTML = `<option value="">— choose task —</option>`;
+    taskSelect.disabled = true;
+    if (emptyTasks) emptyTasks.style.display = "none";
+    return;
+  }
+  const res = await fetch(`/api/user/${userId}/tasks`);
+  const tasks = await res.json();
+  taskSelect.innerHTML = `<option value="">— choose task —</option>`;
+  for(const t of tasks){
+    const opt = document.createElement("option");
+    opt.value = t.id;
+    opt.textContent = `[${t.project || "-"}] ${t.title}`;
+    taskSelect.appendChild(opt);
+  }
+  taskSelect.disabled = tasks.length === 0;
+  if (emptyTasks) emptyTasks.style.display = tasks.length === 0 ? "block" : "none";
+}
