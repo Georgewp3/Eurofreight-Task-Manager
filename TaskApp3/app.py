@@ -172,15 +172,23 @@ def create_app():
     @admin_required
     def admin_export_csv():
         filename = f"data_bank_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}.csv"
-        filepath = os.path.join(os.path.dirname(__file__), filename)
+    filepath = os.path.join(os.path.dirname(__file__), filename)
 
-        logs = LogEntry.query.order_by(LogEntry.timestamp.asc()).all()
-        with open(filepath, "w", newline="", encoding="utf-8") as f:
-            writer = csv.writer(f)
-            writer.writerow(["User", "Project", "Task", "Status", "Timestamp (UTC)", "Comment"])
-            for row in logs:
-                writer.writerow(row.as_csv_row())
-        return send_file(filepath, as_attachment=True, download_name=filename)
+    logs = LogEntry.query.order_by(LogEntry.timestamp.asc()).all()
+    with open(filepath, "w", newline="", encoding="utf-8") as f:
+        writer = csv.writer(f)
+        writer.writerow(["User", "Project", "Task", "Status", "Timestamp (UTC)", "Comment"])
+        for r in logs:
+            writer.writerow([
+                r.user_name,
+                r.project,
+                r.task_title,
+                r.status,
+                r.timestamp.strftime('%d/%m/%Y %H:%M:%S'),  # DD/MM/YYYY HH:MM:SS
+                r.comment or ""
+            ])
+
+    return send_file(filepath, as_attachment=True, download_name=filename)
 
     @app.post("/admin/data-bank/clear")
     @admin_required
