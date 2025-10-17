@@ -181,6 +181,24 @@ def create_app():
             for row in logs:
                 writer.writerow(row.as_csv_row())
         return send_file(filepath, as_attachment=True, download_name=filename)
+
+    @app.post("/admin/data-bank/delete-selected")
+    @admin_required
+    def admin_delete_selected():
+        ids = request.form.getlist("ids")  # list of string ids
+        if not ids:
+            flash("No rows selected.", "warning")
+            return redirect(url_for("admin_data_bank"))
+
+        # delete matching rows
+        try:
+            count = LogEntry.query.filter(LogEntry.id.in_(ids)).delete(synchronize_session=False)
+            db.session.commit()
+            flash(f"Deleted {count} selected row(s).", "success")
+        except Exception as e:
+            db.session.rollback()
+            flash(f"Delete failed: {e}", "danger")
+        return redirect(url_for("admin_data_bank"))
     
     @app.post("/admin/data-bank/clear")
     @admin_required
