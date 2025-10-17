@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block content %}
+<h1 class="page-title">User Entries</h1>
+
+<div class="grid two">
+  <section class="card">
+    <h2>Step 1 — Select User</h2>
+    <select id="userSelect">
+      <option value="">— choose user —</option>
+      {% for u in users %}
+      <option value="{{u.id}}">{{u.full_name}}</option>
+      {% endfor %}
+    </select>
+  </section>
+
+  <section class="card">
+    <h2>Step 2 — Select Task</h2>
+    <select id="taskSelect" disabled>
+      <option value="">— choose task —</option>
+    </select>
+  </section>
+
+  <section class="card">
+    <h2>Step 3 — Task Status</h2>
+    <select id="statusSelect" disabled>
+      <option value="">— choose status —</option>
+      <option value="COMPLETED">Done</option>
+      <option value="NOT_COMPLETED">Not done</option>
+    </select>
+  </section>
+
+  <section class="card">
+    <h2>Step 4 — Optional Comment</h2>
+    <textarea id="comment" placeholder="Reason (optional)"></textarea>
+  </section>
+</div>
+
+<form id="entryForm" class="actions" method="post" action="{{ url_for('submit_entry') }}">
+  <input type="hidden" name="user_id" id="f_user_id">
+  <input type="hidden" name="task_id" id="f_task_id">
+  <input type="hidden" name="status" id="f_status">
+  <input type="hidden" name="comment" id="f_comment">
+  <button class="primary" id="submitBtn" disabled>Submit Entry</button>
+</form>
+
+<p class="muted">Tip: tasks auto-refresh every 8 seconds while a user is selected.</p>
+{% endblock %}

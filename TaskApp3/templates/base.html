@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Task Manager</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <script defer src="{{ url_for('static', filename='app.js') }}"></script>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">Task Manager</div>
+    <nav>
+      <a href="{{ url_for('user_page') }}">User</a>
+      {% if session.get('is_admin') %}
+      <a href="{{ url_for('admin_panel') }}">Admin</a>
+      <a href="{{ url_for('admin_data_bank') }}">Data Bank</a>
+      <a href="{{ url_for('admin_logout') }}">Logout</a>
+      {% else %}
+      <a href="{{ url_for('admin_login') }}">Admin Login</a>
+      {% endif %}
+    </nav>
+  </header>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+  {% if messages %}
+  <div class="flash-wrap">
+    {% for category, message in messages %}
+      <div class="flash {{category}}">{{ message }}</div>
+    {% endfor %}
+  </div>
+  {% endif %}
+  {% endwith %}
+
+  <main class="container">
+    {% block content %}{% endblock %}
+  </main>
+
+  <footer class="footer">© {{ 2025 }} Task Manager</footer>
+</body>
+</html>

@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block content %}
+<h1 class="page-title">Data Bank — Task Logs</h1>
+
+<div class="row">
+  <a class="button" href="{{ url_for('admin_export_csv') }}">Export CSV</a>
+  <form method="post" action="{{ url_for('admin_clear_bank') }}" onsubmit="return confirm('Clear all logs?');">
+    <button class="danger">Clear All</button>
+  </form>
+</div>
+
+<table class="table">
+  <thead>
+    <tr>
+      <th>User</th>
+      <th>Project</th>
+      <th>Task</th>
+      <th>Status</th>
+      <th>Timestamp (UTC)</th>
+      <th>Comment</th>
+    </tr>
+  </thead>
+  <tbody>
+  {% for r in logs %}
+    <tr>
+      <td>{{ r.user_name }}</td>
+      <td>{{ r.project }}</td>
+      <td>{{ r.task_title }}</td>
+      <td>
+        {% if r.status == 'COMPLETED' %}
+          <span class="badge good">COMPLETED</span>
+        {% else %}
+          <span class="badge warn">NOT DONE</span>
+        {% endif %}
+      </td>
+      <td>{{ r.timestamp.strftime('%Y-%m-%d %H:%M:%S') }} UTC</td>
+      <td>{{ r.comment }}</td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endblock %}
