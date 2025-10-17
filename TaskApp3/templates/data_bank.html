@@ -4,37 +4,35 @@
 
 <div class="row">
   <a class="button" href="{{ url_for('admin_export_csv') }}">Export CSV</a>
-  <form method="post" action="{{ url_for('admin_delete_selected') }}" id="delSelectedForm">
-  <div class="row" style="margin:10px 0">
-    <button class="danger" onclick="return confirm('Delete selected rows?');">Delete Selected</button>
-  </div>
+  <form method="post" action="{{ url_for('admin_clear_bank') }}" onsubmit="return confirm('Clear all logs?');">
+    <button class="danger">Clear All</button>
+  </form>
+</div>
 
-  <table class="table">
-    <thead>
-      <tr>
-        <th><input type="checkbox" id="chkAll"></th>
-        <th>User</th>
-        <th>Project</th>
-        <th>Task</th>
-        <th>Status</th>
-        <th>Timestamp (CY)</th>
-        <th>Comment</th>
-      </tr>
-    </thead>
-    <tbody>
-    {% for r in logs %}
-      <tr>
-        <td><input type="checkbox" name="ids" value="{{ r.id }}" class="rowChk"></td>
-        <td>{{ r.user_name }}</td>
-        <td>{{ r.project }}</td>
-        <td>{{ r.task_title }}</td>
-        <td>
-          {% if r.status == 'COMPLETED' %}
-            <span class="badge good">COMPLETED</span>
-          {% else %}
-            <span class="badge warn">NOT DONE</span>
-          {% endif %}
-        </td>
+<table class="table">
+  <thead>
+    <tr>
+      <th>User</th>
+      <th>Project</th>
+      <th>Task</th>
+      <th>Status</th>
+      <th>Timestamp (UTC)</th>
+      <th>Comment</th>
+    </tr>
+  </thead>
+  <tbody>
+  {% for r in logs %}
+    <tr>
+      <td>{{ r.user_name }}</td>
+      <td>{{ r.project }}</td>
+      <td>{{ r.task_title }}</td>
+      <td>
+        {% if r.status == 'COMPLETED' %}
+          <span class="badge good">COMPLETED</span>
+        {% else %}
+          <span class="badge warn">NOT DONE</span>
+        {% endif %}
+      </td>
       <td>{{ r.timestamp.strftime('%Y-%m-%d %H:%M:%S') }}UTC</td>
       <td>{{ r.comment }}</td>
     </tr>
