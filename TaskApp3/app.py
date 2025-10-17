@@ -191,7 +191,7 @@ def create_app():
             for row in logs:
                 ts_local = row.timestampp.replace(tzinfo=ZoneInfo("UTC")).astimezone(cy_time)
                 writer.writerow([
-                    row.user_name,
+                row.user_name,
                 row.project,
                 row.task_title,
                 row.status,
