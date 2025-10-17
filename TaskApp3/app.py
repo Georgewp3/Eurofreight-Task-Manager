@@ -14,7 +14,7 @@ from models import db, User, Task, LogEntry
 load_dotenv()
 
 ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "332133")  # fixed as requested
-DB_PATH = os.path.join(os.path.dirname(__file__), "task_db.sqlite3")
+DB_PATH = os.getenv("DB_PATH", "/tmp/task_db.sqlite3")
 
 def create_app():
     app = Flask(__name__, static_url_path="/static", static_folder="static", template_folder="templates")
