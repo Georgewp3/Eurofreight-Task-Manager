@@ -195,7 +195,7 @@ def create_app():
                 row.project,
                 row.task_title,
                 row.status,
-                ts_local.strftime('%d/%m/%Y - %H/%M/%S'),
+                ts_local.strftime('%d/%m/%Y - %H:%M:%S'),
                 row.comment or ""
                 ])
         return send_file(filepath, as_attachment=True, download_name=filename)
