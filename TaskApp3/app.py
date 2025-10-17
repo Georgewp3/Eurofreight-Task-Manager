@@ -189,7 +189,7 @@ def create_app():
 
         with open(filepath, "w", newline="", encoding="utf-8") as f:
             writer = csv.writer(f)
-            writer.writerow(["User", "Project", "Task", "Status", "Timestamp (UTC)", "Comment"])
+            writer.writerow(["User", "Project", "Task", "Status", "Timestamp", "Comment"])
             for row in logs:
                 ts_local = row.timestamp.replace(tzinfo=ZoneInfo("UTC")).astimezone(cy)
                 writer.writerow([
