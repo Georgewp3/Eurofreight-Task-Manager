@@ -2,6 +2,7 @@ import csv
 import os
 from datetime import datetime
 from functools import wraps
+from zoneinfo import ZoneInfo
 
 from flask import (
     Flask, render_template, request, redirect, url_for,
@@ -22,6 +23,15 @@ def create_app():
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
     app.config["SECRET_KEY"] = os.getenv("SECRET_KEY", "change-me-dev-key")
     db.init_app(app)
+    def cy_time(dt):
+        if not dt:
+            return ""
+        return (
+            dt.replace(tzinfo=ZoneInfo("UTC"))
+              .astimezone(ZoneInfo("Europe/Nicosia"))
+              .strftime("%d/%m/%Y - %H/%M/%S")
+        )
+    app.jinja_env.filters["cy_time"] = cy_time
 
     with app.app_context():
         db.create_all()
