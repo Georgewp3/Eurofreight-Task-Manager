@@ -29,7 +29,7 @@ def create_app():
         return (
             dt.replace(tzinfo=ZoneInfo("UTC"))
               .astimezone(ZoneInfo("Europe/Nicosia"))
-              .strftime("%d/%m/%Y - %H/%M/%S")
+              .strftime("%d/%m/%Y - %H:%M:%S")
         )
     app.jinja_env.filters["cy_time"] = cy_time
 
@@ -189,7 +189,15 @@ def create_app():
             writer = csv.writer(f)
             writer.writerow(["User", "Project", "Task", "Status", "Timestamp (UTC)", "Comment"])
             for row in logs:
-                writer.writerow(row.as_csv_row())
+                ts_local = row.timestampp.replace(tzinfo=ZoneInfo("UTC")).astimezone(cy_time)
+                writer.writerow([
+                    row.user_name,
+                row.project,
+                row.task_title,
+                row.status,
+                ts_local.strftime('%d/%m/%Y - %H/%M/%S'),
+                row.comment or ""
+                ])
         return send_file(filepath, as_attachment=True, download_name=filename)
     
     @app.post("/admin/data-bank/clear")
