@@ -120,31 +120,36 @@ button.small,.button.small{padding:6px 10px;font-size:.9rem}
   .segmented{ width:100%; justify-content:space-between; }
   .sticky-cta{ flex-direction:column; align-items:stretch; }
 }
-
-/* Color only the text of the existing status submit buttons */
-button[name="status"][value="COMPLETED"],
-.button[name="status"][value="COMPLETED"] {
-  color: #16a34a !important;  /* green */
+/* Make segmented status buttons colorful & modern */
+.segmented .seg-btn { 
+  transition: all .18s ease; 
+  border: 1px solid transparent;
 }
 
-button[name="status"][value="NOT_COMPLETED"],
-.button[name="status"][value="NOT_COMPLETED"] {
-  color: #dc2626 !important;  /* red */
+/* DONE (green) */
+.segmented .seg-btn[data-status="COMPLETED"] {
+  color: #16a34a;                           /* text green */
+  border-color: rgba(34,197,94,.35);
 }
-
-/* If you use the segmented buttons variant, color those too */
-.segmented .seg-btn[name="status"][value="COMPLETED"] { color: #16a34a !important; }
-.segmented .seg-btn[name="status"][value="NOT_COMPLETED"] { color: #dc2626 !important; }
-
-/* Color only the text of the segmented status buttons */
-.segmented .seg-btn[data-status="COMPLETED"],
-.segmented .seg-btn[data-status="COMPLETED"].active,
 .segmented .seg-btn[data-status="COMPLETED"]:hover {
-  color: #16a34a !important; /* green */
+  background: rgba(34,197,94,.12);          /* subtle green hover */
+}
+.segmented .seg-btn[data-status="COMPLETED"].selected {
+  background: linear-gradient(135deg,#22c55e,#16a34a);
+  color: #fff;
+  box-shadow: 0 6px 16px rgba(34,197,94,.35);
 }
 
-.segmented .seg-btn[data-status="NOT_COMPLETED"],
-.segmented .seg-btn[data-status="NOT_COMPLETED"].active,
+/* NOT DONE (red) */
+.segmented .seg-btn[data-status="NOT_COMPLETED"] {
+  color: #dc2626;                           /* text red */
+  border-color: rgba(239,68,68,.35);
+}
 .segmented .seg-btn[data-status="NOT_COMPLETED"]:hover {
-  color: #dc2626 !important; /* red */
+  background: rgba(239,68,68,.12);          /* subtle red hover */
+}
+.segmented .seg-btn[data-status="NOT_COMPLETED"].selected {
+  background: linear-gradient(135deg,#ef4444,#dc2626);
+  color: #fff;
+  box-shadow: 0 6px 16px rgba(239,68,68,.35);
 }
