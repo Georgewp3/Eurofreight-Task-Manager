@@ -21,16 +21,17 @@ def _resolve_db_uri() -> str:
     if not db_url:
         raise RuntimeError("DATABASE_URL is not set. Configure it in Render → Environment.")
 
-    # Normalize to SQLAlchemy's psycopg3 dialect
+    # Force psycopg3 driver for SQLAlchemy
     if db_url.startswith("postgres://"):
         db_url = db_url.replace("postgres://", "postgresql+psycopg://", 1)
     elif db_url.startswith("postgresql://"):
         db_url = db_url.replace("postgresql://", "postgresql+psycopg://", 1)
 
-    # Ensure SSL (hosted DBs)
+    # Ensure SSL for hosted DBs
     if "sslmode=" not in db_url:
         db_url += ("&" if "?" in db_url else "?") + "sslmode=require"
     return db_url
+
 
 
 def create_app():
