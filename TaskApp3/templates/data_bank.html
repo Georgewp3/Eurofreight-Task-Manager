@@ -4,6 +4,10 @@
 
 <div class="row">
   <a class="button" href="{{ url_for('admin_export_csv') }}">Export CSV</a>
+  <form method="post" action="{{ url_for('admin_update_db') }}" enctype="multipart/form-data">
+    <input type="file" name="dbfile" accept=".sqlite3,.sqlite,.db" required>
+    <button class="button">Update DB (merge)</button>
+  </form>
   <form method="post" action="{{ url_for('admin_clear_bank') }}" onsubmit="return confirm('Clear all logs?');">
     <button class="danger">Clear All</button>
   </form>
