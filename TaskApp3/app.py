@@ -15,11 +15,26 @@ from models import db, User, Task, LogEntry
 load_dotenv()
 
 ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "332133")  # fixed as requested
-DB_PATH = os.path.join(os.path.dirname(__file__), "task_db.sqlite3")
+DB_PATH = os.getenv("DB_PATH", "/var/data/task_db.sqlite3")
+
+def _resolve_db_uri():
+   #db_url = os.getenv("DATABASE_URL")
+   #if db_url:
+
+#    if db_url.startswith("postgres://"):
+ #       db_url = db_url.replace("postgres://", "postgresql://", 1)
+
+#        if "sslmode=" not in db_url:
+ #           db_url += ("&" if "?" in db_url else "?") + "sslmode=require"
+  #      return db_url
+    
+    return f"sqlite:///{DB_PATH}"
+
+os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
 
 def create_app():
     app = Flask(__name__, static_url_path="/static", static_folder="static", template_folder="templates")
-    app.config["SQLALCHEMY_DATABASE_URI"] = f"sqlite:///{DB_PATH}"
+    app.config["SQLALCHEMY_DATABASE_URI"] = _resolve_db_uri()
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
     app.config["SECRET_KEY"] = os.getenv("SECRET_KEY", "change-me-dev-key")
     db.init_app(app)
