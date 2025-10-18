@@ -33,18 +33,6 @@ def _resolve_db_uri():
 os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
 
 def create_app():
-
-    @app.get("/admin/db/download")
-    def admin_download_db():
-        # Copy DB to a temp path to avoid file locking while the app is running
-        tmp_name = f"task_db_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}.sqlite3"
-        tmp_path = os.path.join("/tmp", tmp_name)
-
-        import shutil
-        shutil.copyfile(DB_PATH, tmp_path)
-
-        return send_file(tmp_path, as_attachment=True, download_name=tmp_name)
-    
     app = Flask(__name__, static_url_path="/static", static_folder="static", template_folder="templates")
     app.config["SQLALCHEMY_DATABASE_URI"] = _resolve_db_uri()
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
@@ -79,6 +67,18 @@ def create_app():
                 return f(*args, **kwargs)
             return redirect(url_for("admin_login"))
         return wrapper
+    
+    @app.get("/admin/db/download")
+    @admin_required
+    def admin_download_db():
+        # Copy DB to a temp path to avoid file locking while the app is running
+        tmp_name = f"task_db_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}.sqlite3"
+        tmp_path = os.path.join("/tmp", tmp_name)
+
+        import shutil
+        shutil.copyfile(DB_PATH, tmp_path)
+
+        return send_file(tmp_path, as_attachment=True, download_name=tmp_name)
     
    
     # ---------- Views ----------
