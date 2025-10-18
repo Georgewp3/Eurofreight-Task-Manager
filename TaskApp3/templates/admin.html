@@ -23,6 +23,7 @@
     <section class="card">
   <h2>Data Bank</h2>
   <p>View submissions, export CSV, or clear logs.</p>
+  <a class="button" href="{{ url_for('admin_schedules') }}">Manage Schedules</a>
   <div class="row">
     <a class="button" href="{{ url_for('admin_data_bank') }}">Open Data Bank</a>
     <a class="button" href="{{ url_for('admin_export_csv') }}">Export CSV</a>
