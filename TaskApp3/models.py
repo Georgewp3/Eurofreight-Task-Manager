@@ -39,5 +39,31 @@ class LogEntry(db.Model):
     comment = db.Column(db.Text, default="")
     timestamp = db.Column(db.DateTime, default=datetime.utcnow, index=True)
 
+class ScheduledTask(db.Model):
+    __tablename__ = "scheduled_tasks"
+    id = db.Column(db.Integer, primary_key=True)
+
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
+
+    # what to create
+    project = db.Column(db.String(120), default="-")
+    title   = db.Column(db.String(255), nullable=False)
+
+    # when to run: comma list like "MON,TUE" (always uppercase 3-letter)
+    weekdays = db.Column(db.String(50), nullable=False)  # e.g. "MON" or "MON,FRI"
+
+    # local time-of-day (HH:MM) in the schedule’s timezone
+    time_local = db.Column(db.String(5), default="09:00")  # "HH:MM"
+
+    # tz id (stick to "Europe/Nicosia")
+    tz = db.Column(db.String(64), default="Europe/Nicosia")
+
+    # bookkeeping to avoid duplicate creation per day
+    last_run_date = db.Column(db.Date, nullable=True)
+
+    active = db.Column(db.Boolean, default=True)
+
+    user = db.relationship("User")
+
     def as_csv_row(self):
         return [self.user_name, self.project, self.task_title, self.status, self.timestamp.isoformat(), self.comment or ""]
