@@ -4,6 +4,7 @@ import sqlite3
 import shutil
 from pathlib import Path
 from datetime import datetime
+from datetime import datetime, timezone
 
 from functools import wraps
 from zoneinfo import ZoneInfo
@@ -38,12 +39,14 @@ def create_app():
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
     app.config["SECRET_KEY"] = os.getenv("SECRET_KEY", "change-me-dev-key")
     db.init_app(app)
+        # Cyprus time filter (works on Windows: uses timezone.utc)
     def cy_time(dt):
         if not dt:
             return ""
+        cy = ZoneInfo("Europe/Nicosia")
         return (
-            dt.replace(tzinfo=ZoneInfo("UTC"))
-              .astimezone(ZoneInfo("Europe/Nicosia"))
+            dt.replace(tzinfo=timezone.utc)   # assume stored in UTC
+              .astimezone(cy)
               .strftime("%d/%m/%Y - %H:%M:%S")
         )
     app.jinja_env.filters["cy_time"] = cy_time
