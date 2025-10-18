@@ -1,7 +1,6 @@
 import csv
 import os
 from datetime import datetime, timezone
-
 from functools import wraps
 from zoneinfo import ZoneInfo
 
@@ -16,6 +15,7 @@ from models import db, User, Task, LogEntry
 load_dotenv()
 
 ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "332133")  # fixed as requested
+
 def _resolve_db_uri() -> str:
     db_url = os.getenv("DATABASE_URL")
     if not db_url:
@@ -32,35 +32,32 @@ def create_app():
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
     app.config["SECRET_KEY"] = os.getenv("SECRET_KEY", "change-me-dev-key")
     db.init_app(app)
-        # Cyprus time filter (works on Windows: uses timezone.utc)
+
+    # Cyprus time filter (uses timezone.utc; works fine on Windows/Linux)
     def cy_time(dt):
         if not dt:
             return ""
         cy = ZoneInfo("Europe/Nicosia")
-        return (
-            dt.replace(tzinfo=timezone.utc)   # assume stored in UTC
-              .astimezone(cy)
-              .strftime("%d/%m/%Y - %H:%M:%S")
-        )
+        return dt.replace(tzinfo=timezone.utc).astimezone(cy).strftime("%d/%m/%Y - %H:%M:%S")
     app.jinja_env.filters["cy_time"] = cy_time
 
     with app.app_context():
         db.create_all()
-        # Seed a demo user if database is empty
         if not User.query.first():
             demo = User(full_name="Demo User")
             db.session.add(demo)
             db.session.add(Task(user=demo, project="General", title="Read onboarding doc"))
             db.session.commit()
 
-        # ---------- Helpers ----------
+    # ---------- Helpers ----------
     def admin_required(f):
         @wraps(f)
         def wrapper(*args, **kwargs):
             if session.get("is_admin") is True:
                 return f(*args, **kwargs)
             return redirect(url_for("admin_login"))
-        return wrapper    
+        return wrapper
+    
 
     # ---------- Views ----------
     @app.get("/")
