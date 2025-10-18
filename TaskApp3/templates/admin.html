@@ -27,10 +27,6 @@
     <a class="button" href="{{ url_for('admin_data_bank') }}">Open Data Bank</a>
     <a class="button" href="{{ url_for('admin_export_csv') }}">Export CSV</a>
 
-    <form method="post" action="{{ url_for('admin_update_db') }}" enctype="multipart/form-data" style="display:flex; gap:8px; align-items:center;">
-      <input type="file" name="dbfile" accept=".sqlite3,.sqlite,.db" required>
-      <button class="button">Update DB (merge)</button>
-    </form>
 
     <form method="post" action="{{ url_for('admin_clear_bank') }}" onsubmit="return confirm('Clear all logs?');">
       <button class="danger">Clear Bank</button>
