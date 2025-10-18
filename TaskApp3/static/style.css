@@ -135,3 +135,16 @@ button[name="status"][value="NOT_COMPLETED"],
 /* If you use the segmented buttons variant, color those too */
 .segmented .seg-btn[name="status"][value="COMPLETED"] { color: #16a34a !important; }
 .segmented .seg-btn[name="status"][value="NOT_COMPLETED"] { color: #dc2626 !important; }
+
+/* Color only the text of the segmented status buttons */
+.segmented .seg-btn[data-status="COMPLETED"],
+.segmented .seg-btn[data-status="COMPLETED"].active,
+.segmented .seg-btn[data-status="COMPLETED"]:hover {
+  color: #16a34a !important; /* green */
+}
+
+.segmented .seg-btn[data-status="NOT_COMPLETED"],
+.segmented .seg-btn[data-status="NOT_COMPLETED"].active,
+.segmented .seg-btn[data-status="NOT_COMPLETED"]:hover {
+  color: #dc2626 !important; /* red */
+}
