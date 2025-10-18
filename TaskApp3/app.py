@@ -53,6 +53,7 @@ def create_app():
     
 
     # ---------- Helpers ----------
+        # ---------- Helpers ----------
     def admin_required(f):
         @wraps(f)
         def wrapper(*args, **kwargs):
@@ -60,8 +61,8 @@ def create_app():
                 return f(*args, **kwargs)
             return redirect(url_for("admin_login"))
         return wrapper
-    
-        # --- Merge a source SQLite DB into the current DB (by name/keys) ---
+
+    # --- Merge a source SQLite DB into the current DB (by name/keys) ---
     def merge_sqlite_into_current(src_path: str):
         src = sqlite3.connect(src_path)
         src.row_factory = sqlite3.Row
@@ -89,7 +90,7 @@ def create_app():
         for t in src_tasks:
             dest_user = User.query.filter_by(full_name=t["user_name"]).first()
             if not dest_user:
-                continue  # user not present (probably filtered out); skip safely
+                continue
             exists = Task.query.filter_by(
                 user_id=dest_user.id, title=t["title"], project=(t["project"] or "-")
             ).first()
@@ -109,7 +110,6 @@ def create_app():
                 return val
             if not val:
                 return datetime.utcnow()
-            # Try common formats (with/without T, with/without microseconds)
             for fmt in ("%Y-%m-%d %H:%M:%S.%f",
                         "%Y-%m-%d %H:%M:%S",
                         "%Y-%m-%dT%H:%M:%S.%f",
@@ -118,7 +118,6 @@ def create_app():
                     return datetime.strptime(val, fmt)
                 except Exception:
                     pass
-            # Last resort
             try:
                 return datetime.fromisoformat(val)
             except Exception:
@@ -146,12 +145,12 @@ def create_app():
 
         src.close()
         return added_users, added_tasks, added_logs
-    
+
     @app.post("/admin/db/update")
     @admin_required
     def admin_update_db():
         f = request.files.get("dbfile")
-        if not f or f.filename.strip() == "":
+        if not f or not f.filename:
             flash("No file selected.", "warning")
             return redirect(url_for("admin_data_bank"))
 
@@ -160,23 +159,46 @@ def create_app():
             flash("Please upload a .sqlite3/.sqlite/.db file.", "danger")
             return redirect(url_for("admin_data_bank"))
 
-        tmp_path = os.path.join("/tmp", f"upload_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}.sqlite3")
+        # Save upload to /tmp
+        tmp_src = os.path.join("/tmp", f"upload_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}.sqlite3")
         try:
-            f.save(tmp_path)
-            u, t, l = merge_sqlite_into_current(tmp_path)
-            flash(f"Update complete: +{u} users, +{t} tasks, +{l} logs merged.", "success")
+            f.save(tmp_src)
+        except Exception as e:
+            flash(f"Upload failed: {e}", "danger")
+            return redirect(url_for("admin_data_bank"))
+
+        # Count BEFORE
+        before = {
+            "users": db.session.query(User).count(),
+            "tasks": db.session.query(Task).count(),
+            "logs":  db.session.query(LogEntry).count(),
+        }
+
+        try:
+            add_u, add_t, add_l = merge_sqlite_into_current(tmp_src)
+
+            after = {
+                "users": db.session.query(User).count(),
+                "tasks": db.session.query(Task).count(),
+                "logs":  db.session.query(LogEntry).count(),
+            }
+
+            flash(
+                f"Update complete: +{add_u} users, +{add_t} tasks, +{add_l} logs "
+                f"(totals now U:{after['users']} T:{after['tasks']} L:{after['logs']}).",
+                "success"
+            )
         except Exception as e:
             db.session.rollback()
             flash(f"Update failed: {e}", "danger")
         finally:
             try:
-                os.remove(tmp_path)
+                os.remove(tmp_src)
             except Exception:
                 pass
 
         return redirect(url_for("admin_data_bank"))
 
-    
        
     # ---------- Views ----------
     @app.get("/")
