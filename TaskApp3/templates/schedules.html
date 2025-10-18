@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% block content %}
+<h1 class="page-title">Task Schedules</h1>
+
+<section class="card">
+  <h2>Create a Schedule</h2>
+  <form method="post" action="{{ url_for('admin_schedules_add') }}" class="grid">
+    <label>
+      <div>User</div>
+      <select name="user_id" required>
+        {% for u in users %}
+        <option value="{{u.id}}">{{u.full_name}}</option>
+        {% endfor %}
+      </select>
+    </label>
+
+    <label>
+      <div>Project</div>
+      <input name="project" placeholder="e.g. General">
+    </label>
+
+    <label class="col-span-2">
+      <div>Task Title</div>
+      <input name="title" required placeholder="e.g. Weekly Report">
+    </label>
+
+    <div class="col-span-2">
+      <div>Weekdays</div>
+      {% for d in ['MON','TUE','WED','THU','FRI','SAT','SUN'] %}
+      <label style="margin-right:12px;">
+        <input type="checkbox" name="wd_{{d}}" {% if d in ['MON'] %}checked{% endif %}> {{d}}
+      </label>
+      {% endfor %}
+    </div>
+
+    <label>
+      <div>Time (local)</div>
+      <input name="time_local" type="time" value="09:00">
+    </label>
+
+    <div class="col-span-2">
+      <button class="primary">Add Schedule</button>
+    </div>
+  </form>
+</section>
+
+<section class="card">
+  <h2>Existing Schedules</h2>
+  <table class="table">
+    <thead>
+      <tr><th>User</th><th>Project</th><th>Title</th><th>Weekdays</th><th>Time</th><th>Last Run</th><th>Actions</th></tr>
+    </thead>
+    <tbody>
+      {% for s in schedules %}
+      <tr>
+        <td>{{ s.user.full_name }}</td>
+        <td>{{ s.project }}</td>
+        <td>{{ s.title }}</td>
+        <td>{{ s.weekdays }}</td>
+        <td>{{ s.time_local }}</td>
+        <td>{{ s.last_run_date or '-' }}</td>
+        <td>
+          <form method="post" action="{{ url_for('admin_schedules_delete', sid=s.id) }}" onsubmit="return confirm('Delete this schedule?')">
+            <button class="danger">Delete</button>
+          </form>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</section>
+{% endblock %}
