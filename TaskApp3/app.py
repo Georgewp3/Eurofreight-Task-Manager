@@ -58,7 +58,7 @@ def create_app():
             db.session.commit()
 
     @app.get("/admin/db/download")
-    @admin.required
+    @admin_required
     def admin_download_db():
         # Copy DB to a temp path to avoid file locking while the app is running
         tmp_name = f"task_db_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}.sqlite3"
