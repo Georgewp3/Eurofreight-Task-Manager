@@ -347,7 +347,7 @@ def create_app():
             writer = csv.writer(f)
             writer.writerow(["User", "Project", "Task", "Status", "Timestamp", "Comment"])
             for row in logs:
-                ts_local = row.timestamp.replace(tzinfo=ZoneInfo("UTC")).astimezone(cy)
+                ts_local = row.timestamp.replace(tzinfo=timezone.utc).astimezone(cy)
                 writer.writerow([
                 row.user_name,
                 row.project,
