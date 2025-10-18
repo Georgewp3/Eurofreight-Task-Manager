@@ -2,8 +2,9 @@ import csv
 import os
 import sqlite3
 import shutil
-from datetime import datetime, timedelta
+from pathlib import Path
 from datetime import datetime
+
 from functools import wraps
 from zoneinfo import ZoneInfo
 
@@ -18,12 +19,18 @@ from models import db, User, Task, LogEntry
 load_dotenv()
 
 ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "332133")  # fixed as requested
-DB_PATH = os.getenv("DB_PATH", "/var/data/task_db.sqlite3")
+LOCAL_WIN_DB = Path(
+    r"C:\Users\giorg\OneDrive\Υπολογιστής\My Projects\Task Manager App - Python\TaskApp3\task_db.sqlite3"
+).resolve()
 
-def _resolve_db_uri():
-    return f"sqlite:///{DB_PATH}"
+DB_PATH = os.getenv("DB_PATH", str(LOCAL_WIN_DB))
 
-os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
+# Ensure the folder exists locally
+Path(DB_PATH).parent.mkdir(parents=True, exist_ok=True)
+
+def _resolve_db_uri() -> str:
+    # SQLAlchemy wants forward slashes even on Windows
+    return f"sqlite:///{Path(DB_PATH).as_posix()}"
 
 def create_app():
     app = Flask(__name__, static_url_path="/static", static_folder="static", template_folder="templates")
@@ -50,9 +57,6 @@ def create_app():
             db.session.add(Task(user=demo, project="General", title="Read onboarding doc"))
             db.session.commit()
 
-    
-
-    # ---------- Helpers ----------
         # ---------- Helpers ----------
     def admin_required(f):
         @wraps(f)
