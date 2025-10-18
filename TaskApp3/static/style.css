@@ -120,3 +120,18 @@ button.small,.button.small{padding:6px 10px;font-size:.9rem}
   .segmented{ width:100%; justify-content:space-between; }
   .sticky-cta{ flex-direction:column; align-items:stretch; }
 }
+
+/* Color only the text of the existing status submit buttons */
+button[name="status"][value="COMPLETED"],
+.button[name="status"][value="COMPLETED"] {
+  color: #16a34a !important;  /* green */
+}
+
+button[name="status"][value="NOT_COMPLETED"],
+.button[name="status"][value="NOT_COMPLETED"] {
+  color: #dc2626 !important;  /* red */
+}
+
+/* If you use the segmented buttons variant, color those too */
+.segmented .seg-btn[name="status"][value="COMPLETED"] { color: #16a34a !important; }
+.segmented .seg-btn[name="status"][value="NOT_COMPLETED"] { color: #dc2626 !important; }
