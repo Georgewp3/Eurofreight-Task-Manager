@@ -10,7 +10,7 @@ from flask import (
 )
 from dotenv import load_dotenv
 
-from models import db, User, Task, LogEntry
+from models import db, User, Task, LogEntry, ScheduledTask
 
 load_dotenv()
 
@@ -61,9 +61,9 @@ def create_app():
     def admin_required(f):
         @wraps(f)
         def wrapper(*args, **kwargs):
-            if session.get("is_admin") is True:
-                return f(*args, **kwargs)
-            return redirect(url_for("admin_login"))
+          if session.get("is_admin") is True:
+              return f(*args, **kwargs)
+          return redirect(url_for("admin_login"))
         return wrapper
     
     @app.get("/admin/schedules")
@@ -73,85 +73,88 @@ def create_app():
         schedules = ScheduledTask.query.order_by(ScheduledTask.id.desc()).all()
         return render_template("schedules.html", users=users, schedules=schedules)
 
+    
     @app.post("/admin/schedules/add")
     @admin_required
     def admin_schedules_add():
         user_id = int(request.form.get("user_id"))
-    title = (request.form.get("title") or "").strip()
-    project = (request.form.get("project") or "-").strip() or "-"
-    # checkboxes named "wd_MON", "wd_TUE", etc.
-    chosen = [d for d in ["MON","TUE","WED","THU","FRI","SAT","SUN"] if request.form.get(f"wd_{d}")]
-    wds = ",".join(chosen) if chosen else "MON"
-    time_local = (request.form.get("time_local") or "09:00")[:5]
-    tz = "Europe/Nicosia"
-    if not title:
-        flash("Title required.", "danger")
+        title = (request.form.get("title") or "").strip()
+        project = (request.form.get("project") or "-").strip() or "-"
+
+        # checkboxes named wd_MON, wd_TUE, ... in the form
+        chosen = [d for d in ["MON","TUE","WED","THU","FRI","SAT","SUN"] if request.form.get(f"wd_{d}")]
+        wds = ",".join(chosen) if chosen else "MON"
+
+        time_local = (request.form.get("time_local") or "09:00")[:5]
+        tz = "Europe/Nicosia"
+
+        if not title:
+            flash("Title required.", "danger")
+            return redirect(url_for("admin_schedules"))
+
+        db.session.add(ScheduledTask(
+            user_id=user_id, title=title, project=project,
+            weekdays=wds, time_local=time_local, tz=tz, active=True
+        ))
+        db.session.commit()
+        flash("Schedule added.", "success")
         return redirect(url_for("admin_schedules"))
-    db.session.add(ScheduledTask(
-        user_id=user_id, title=title, project=project,
-        weekdays=wds, time_local=time_local, tz=tz, active=True
-    ))
-    db.session.commit()
-    flash("Schedule added.", "success")
-    return redirect(url_for("admin_schedules"))
 
-# Delete
-@app.post("/admin/schedules/delete/<int:sid>")
-@admin_required
-def admin_schedules_delete(sid):
-    s = ScheduledTask.query.get_or_404(sid)
-    db.session.delete(s)
-    db.session.commit()
-    flash("Schedule removed.", "success")
-    return redirect(url_for("admin_schedules"))
+    # Delete
+    @app.post("/admin/schedules/delete/<int:sid>")
+    @admin_required
+    def admin_schedules_delete(sid):
+        s = ScheduledTask.query.get_or_404(sid)
+        db.session.delete(s)
+        db.session.commit()
+        flash("Schedule removed.", "success")
+        return redirect(url_for("admin_schedules"))
 
-# ENV var like: SCHEDULE_TOKEN=longrandomstring
-SCHEDULE_TOKEN = os.getenv("SCHEDULE_TOKEN")
+    # Secure internal endpoint for the cron job to materialize today's tasks
+    SCHEDULE_TOKEN = os.getenv("SCHEDULE_TOKEN")
 
-@app.post("/internal/run-schedules")
-def internal_run_schedules():
-    token = request.headers.get("X-TaskApp-Token") or request.args.get("token")
-    if not SCHEDULE_TOKEN or token != SCHEDULE_TOKEN:
-        return ("Unauthorized", 401)
+    @app.post("/internal/run-schedules")
+    def internal_run_schedules():
+        token = request.headers.get("X-TaskApp-Token") or request.args.get("token")
+        if not SCHEDULE_TOKEN or token != SCHEDULE_TOKEN:
+            return ("Unauthorized", 401)
 
-    # Use Europe/Nicosia local date/time
-    tz = ZoneInfo("Europe/Nicosia")
-    now_local = datetime.now(tz)
-    today = now_local.date()
-    wd = now_local.strftime("%a").upper()[:3]  # "MON", "TUE", ...
+        tz = ZoneInfo("Europe/Nicosia")
+        now_local = datetime.now(tz)
+        today = now_local.date()
+        wd = now_local.strftime("%a").upper()[:3]  # "MON", "TUE", ...
 
-    created = 0
-    schedules = ScheduledTask.query.filter_by(active=True).all()
-    for s in schedules:
-        # Check weekday match
-        allowed = set([x.strip().upper() for x in (s.weekdays or "").split(",") if x.strip()])
-        if wd not in allowed:
-            continue
+        created = 0
+        schedules = ScheduledTask.query.filter_by(active=True).all()
+        for s in schedules:
+            allowed = set(x.strip().upper() for x in (s.weekdays or "").split(",") if x.strip())
+            if wd not in allowed:
+                continue
 
-        # Check time-of-day gate (only create after scheduled time)
-        try:
-            hh, mm = (s.time_local or "00:00").split(":")
-            run_time = datetime(today.year, today.month, today.day, int(hh), int(mm), tzinfo=tz)
-        except Exception:
-            run_time = datetime(today.year, today.month, today.day, 0, 0, tzinfo=tz)
+            try:
+                hh, mm = (s.time_local or "00:00").split(":")
+                run_time = datetime(today.year, today.month, today.day, int(hh), int(mm), tzinfo=tz)
+            except Exception:
+                run_time = datetime(today.year, today.month, today.day, 0, 0, tzinfo=tz)
 
-        if now_local < run_time:
-            continue  # too early today
+            if now_local < run_time:
+                continue
 
-        # Avoid duplicate for the same day
-        if s.last_run_date == today:
-            continue
+            if s.last_run_date == today:
+                continue
 
-        # Create (idempotent) task — avoid dup title for the same user/project/title/day
-        exists = Task.query.filter_by(user_id=s.user_id, title=s.title, project=s.project).first()
-        if not exists:
-            db.session.add(Task(user_id=s.user_id, project=s.project, title=s.title))
-            created += 1
+            exists = Task.query.filter_by(user_id=s.user_id, title=s.title, project=s.project).first()
+            if not exists:
+                db.session.add(Task(user_id=s.user_id, project=s.project, title=s.title))
+                created += 1
 
-        s.last_run_date = today
+            s.last_run_date = today
 
-    db.session.commit()
-    return {"created": created, "date": str(today), "weekday": wd}, 200
+        db.session.commit()
+        return {"created": created, "date": str(today), "weekday": wd}, 200
+
+
+
 
     # ---------- Views ----------
     @app.get("/")

@@ -1,69 +1,74 @@
-from datetime import datetime
+# models.py
 from flask_sqlalchemy import SQLAlchemy
 
 db = SQLAlchemy()
 
-# --- Tables ---
-
+# --- Users who receive tasks ---
 class User(db.Model):
     __tablename__ = "users"
+
     id = db.Column(db.Integer, primary_key=True)
-    full_name = db.Column(db.String(120), unique=True, nullable=False)
-    active = db.Column(db.Boolean, default=True)
+    full_name = db.Column(db.String(200), unique=True, nullable=False)
+    active = db.Column(db.Boolean, default=True, nullable=False)
+
+    # backref "user" on Task
     tasks = db.relationship("Task", backref="user", cascade="all, delete-orphan")
 
-    def __repr__(self):
-        return f"<User {self.full_name}>"
 
+# --- Assignable tasks (show up for a user until completed) ---
 class Task(db.Model):
     __tablename__ = "tasks"
+
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
-    project = db.Column(db.String(120), default="-")
+    project = db.Column(db.String(120), default="-", nullable=False)
     title = db.Column(db.String(255), nullable=False)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, server_default=db.func.now(), nullable=False)
 
-    def __repr__(self):
-        return f"<Task {self.title} for {self.user_id}>"
 
+# --- Submitted entries (audit/data bank) ---
 class LogEntry(db.Model):
-    """
-    Data Bank rows — a submission from a user.
-    """
     __tablename__ = "log_entries"
-    id = db.Column(db.Integer, primary_key=True)
-    user_name = db.Column(db.String(120), nullable=False)    # denormalized for simple CSV
-    project = db.Column(db.String(120), default="-")
-    task_title = db.Column(db.String(255), nullable=False)
-    status = db.Column(db.String(20), nullable=False)        # COMPLETED or NOT_COMPLETED
-    comment = db.Column(db.Text, default="")
-    timestamp = db.Column(db.DateTime, default=datetime.utcnow, index=True)
 
+    id = db.Column(db.Integer, primary_key=True)
+    user_name = db.Column(db.String(200), nullable=False)
+    project = db.Column(db.String(120), default="-", nullable=False)
+    task_title = db.Column(db.String(255), nullable=False)
+    status = db.Column(db.String(40), nullable=False)  # "COMPLETED" or "NOT_COMPLETED"
+    comment = db.Column(db.Text, default="", nullable=False)
+    timestamp = db.Column(db.DateTime, server_default=db.func.now(), nullable=False)
+
+    # Used by older CSV export code; safe to keep
+    def as_csv_row(self):
+        return [
+            self.user_name,
+            self.project or "-",
+            self.task_title,
+            self.status,
+            self.timestamp,   # format in the route if needed
+            self.comment or "",
+        ]
+
+
+# --- Recurring schedules (admin-configured, materialized by cron) ---
 class ScheduledTask(db.Model):
     __tablename__ = "scheduled_tasks"
+
     id = db.Column(db.Integer, primary_key=True)
 
     user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
-
-    # what to create
-    project = db.Column(db.String(120), default="-")
-    title   = db.Column(db.String(255), nullable=False)
-
-    # when to run: comma list like "MON,TUE" (always uppercase 3-letter)
-    weekdays = db.Column(db.String(50), nullable=False)  # e.g. "MON" or "MON,FRI"
-
-    # local time-of-day (HH:MM) in the schedule’s timezone
-    time_local = db.Column(db.String(5), default="09:00")  # "HH:MM"
-
-    # tz id (stick to "Europe/Nicosia")
-    tz = db.Column(db.String(64), default="Europe/Nicosia")
-
-    # bookkeeping to avoid duplicate creation per day
-    last_run_date = db.Column(db.Date, nullable=True)
-
-    active = db.Column(db.Boolean, default=True)
-
     user = db.relationship("User")
 
-    def as_csv_row(self):
-        return [self.user_name, self.project, self.task_title, self.status, self.timestamp.isoformat(), self.comment or ""]
+    # What to create
+    project = db.Column(db.String(120), default="-", nullable=False)
+    title = db.Column(db.String(255), nullable=False)
+
+    # When to create it
+    weekdays = db.Column(db.String(50), nullable=False)     # e.g., "MON,FRI"
+    time_local = db.Column(db.String(5), default="09:00", nullable=False)  # "HH:MM"
+    tz = db.Column(db.String(64), default="Europe/Nicosia", nullable=False)
+
+    # Prevent duplicate creation per calendar day
+    last_run_date = db.Column(db.Date, nullable=True)
+
+    active = db.Column(db.Boolean, default=True, nullable=False)
