@@ -153,3 +153,10 @@ button.small,.button.small{padding:6px 10px;font-size:.9rem}
   color: #fff;
   box-shadow: 0 6px 16px rgba(239,68,68,.35);
 }
+/* admin search */
+.row input[name="q"] {
+  height: 38px;
+  padding: 8px 12px;
+  border: 1px solid var(--border, #dfe3ea);
+  border-radius: 10px;
+}

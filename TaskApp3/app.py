@@ -220,15 +220,26 @@ def create_app():
     @app.get("/admin")
     @admin_required
     def admin_panel():
-        users = User.query.order_by(User.full_name.asc()).all()
+        q = (request.args.get("q") or "").strip()
+        
+        query = User.query
+        if q:
+            query = query.filter(User.full_name.ilike(f"%{q}%"))
+
+        users = query.order_by(User.full_name.asc()).all()
+
         # Flatten for “Assign Tasks” card
         rows = []
         for u in users:
             rows.append({
-                "id": u.id, "name": u.full_name, "active": u.active,
-                "tasks": [{"id": t.id, "project": t.project, "title": t.title} for t in u.tasks]
+                "id": u.id,
+                "name": u.full_name,
+                "active": u.active,
+                "tasks": [{"id": t.id, "project": t.project, "title": t.title} for t in u.tasks],
             })
-        return render_template("admin.html", stage="panel", users=rows)
+    
+
+        
 
     @app.post("/admin/add-user")
     @admin_required
