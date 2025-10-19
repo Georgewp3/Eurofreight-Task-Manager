@@ -237,7 +237,8 @@ def create_app():
                 "active": u.active,
                 "tasks": [{"id": t.id, "project": t.project, "title": t.title} for t in u.tasks],
             })
-    
+        return render_template("admin.html", stage="panel", users=rows, q=q)
+
 
         
 
