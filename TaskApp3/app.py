@@ -178,12 +178,14 @@ def create_app():
             project=task.project or "-",
             task_title=task.title,
             status=status,
-            comment=comment
+            comment=comment,
+            timestamp=datetime.utcnow()
         )
         db.session.add(entry)
         db.session.commit()
         flash("Entry submitted.", "success")
         return redirect(url_for("user_page"))
+    
 
     # --- APIs for dynamic UI ---
     @app.get("/api/users")
