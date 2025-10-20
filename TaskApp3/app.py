@@ -1,8 +1,9 @@
 import csv
 import os
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from functools import wraps
 from zoneinfo import ZoneInfo
+from sqlalchemy import func, case
 
 from flask import (
     Flask, render_template, request, redirect, url_for,
@@ -72,6 +73,92 @@ def create_app():
         users = User.query.order_by(User.full_name.asc()).all()
         schedules = ScheduledTask.query.order_by(ScheduledTask.id.desc()).all()
         return render_template("schedules.html", users=users, schedules=schedules)
+    
+    @app.get("/admin/insights")
+    @admin_required
+    def admin_insights():
+        return render_template("insights.html")
+    
+    @app.get("/admin/insights/data")
+    @admin_required
+    def admin_insights_data():
+        now = datetime.utcnow()
+        d30 = now - timedelta(days=29)
+        d7  = now - timedelta(days=6)
+
+
+        total = db.session.query(func.count(LogEntry.id)).scalar() or 0
+        completed = db.session.query(func.count(LogEntry.id)).filter(
+            LogEntry.status == "COMPLETED"
+        ).scalar() or 0
+        completion_rate = (completed / total * 100.0) if total else 0.0
+
+        not_done_with_comment = db.session.query(func.count(LogEntry.id)).filter(
+            LogEntry.status != "COMPLETED",
+            func.length(func.coalesce(LogEntry.comment, "")) > 0
+        ).scalar() or 0
+
+        #Daily submissions (last 30 days)
+        daily_rows = db.session.query(
+            func.date(LogEntry.timestamp).label("day"),
+            func.count(LogEntry.id)
+        ).filter(LogEntry.timestamp >= d30)\
+         .group_by(func.date(LogEntry.timestamp))\
+         .order_by(func.date(LogEntry.timestamp)).all()
+        
+        # Per-user completions (last 30 days)
+        per_user_rows = db.session.query(
+            LogEntry.user_name,
+            func.count(LogEntry.id)
+        ).filter(
+            LogEntry.timestamp >= d30,
+            LogEntry.status == "COMPLETED"
+        ).group_by(LogEntry.user_name)\
+        .order_by(func.count(LogEntry.id).desc()).limit(10).all()
+
+        # Per-project completions (last 30 days)
+        per_proj_rows = db.session.query(
+             func.coalesce(LogEntry.project, "-"),
+             func.count(LogEntry.id)
+        ).filter(
+            LogEntry.timestamp >= d30,
+            LogEntry.status == "COMPLETED"
+        ).group_by(func.coalesce(LogEntry.project, "-"))\
+         .order_by(func.count(LogEntry.id).desc()).limit(10).all()
+        
+        # Last 7 days completion rate
+        last7_total = db.session.query(func.count(LogEntry.id)).filter(
+            LogEntry.timestamp >= d7
+        ).scalar() or 0
+        last7_completed = db.session.query(func.count(LogEntry.id)).filter(
+            LogEntry.timestamp >= d7,
+            LogEntry.status == "COMPLETED"
+        ).scalar() or 0
+        last7_rate = (last7_completed / last7_total * 100.0) if last7_total else 0.0
+
+        # Build arrays for charts
+        daily_labels = [str(r[0]) for r in daily_rows]
+        daily_counts = [int(r[1]) for r in daily_rows]
+
+        user_labels  = [r[0] for r in per_user_rows]
+        user_counts  = [int(r[1]) for r in per_user_rows]
+
+        proj_labels  = [r[0] for r in per_proj_rows]
+        proj_counts  = [int(r[1]) for r in per_proj_rows]
+
+        return jsonify({
+            "kpis": {
+                "total_submissions": total,
+                "completed": completed,
+                "completion_rate": round(completion_rate, 1),
+                "not_done_with_comment": not_done_with_comment,
+                "last7_rate": round(last7_rate, 1),
+            },
+            "daily": {"labels": daily_labels, "counts": daily_counts},
+            "per_user": {"labels": user_labels, "counts": user_counts},
+            "per_project": {"labels": proj_labels, "counts": proj_counts},
+        })
+
 
     
     @app.post("/admin/schedules/add")

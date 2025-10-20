@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+{% block content %}
+<h1 class="page-title">Insights</h1>
+
+<section class="card">
+  <h2>Key Metrics</h2>
+  <div class="kpi-grid">
+    <div class="kpi"><div class="kpi-label">Total Submissions</div><div id="kpiTotal" class="kpi-value">—</div></div>
+    <div class="kpi"><div class="kpi-label">Completed</div><div id="kpiCompleted" class="kpi-value">—</div></div>
+    <div class="kpi"><div class="kpi-label">Completion Rate</div><div id="kpiRate" class="kpi-value">—%</div></div>
+    <div class="kpi"><div class="kpi-label">Not Done w/ Comment</div><div id="kpiNdc" class="kpi-value">—</div></div>
+    <div class="kpi"><div class="kpi-label">Last 7d Completion</div><div id="kpiLast7" class="kpi-value">—%</div></div>
+  </div>
+</section>
+
+<section class="card">
+  <h2>Activity — Last 30 Days</h2>
+  <canvas id="dailyChart" height="110"></canvas>
+</section>
+
+<section class="grid two">
+  <section class="card">
+    <h2>Top Users (Completed)</h2>
+    <canvas id="userChart" height="180"></canvas>
+  </section>
+  <section class="card">
+    <h2>Top Projects (Completed)</h2>
+    <canvas id="projChart" height="180"></canvas>
+  </section>
+</section>
+
+<!-- Chart.js from CDN -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script>
+(async function(){
+  try{
+    const res = await fetch("{{ url_for('admin_insights_data') }}", { credentials: "include" });
+    const data = await res.json();
+
+    // KPIs
+    document.getElementById('kpiTotal').textContent    = data.kpis.total_submissions;
+    document.getElementById('kpiCompleted').textContent= data.kpis.completed;
+    document.getElementById('kpiRate').textContent     = data.kpis.completion_rate + "%";
+    document.getElementById('kpiNdc').textContent      = data.kpis.not_done_with_comment;
+    document.getElementById('kpiLast7').textContent    = data.kpis.last7_rate + "%";
+
+    // Charts
+    const ctxDaily = document.getElementById('dailyChart').getContext('2d');
+    new Chart(ctxDaily, {
+      type: 'line',
+      data: {
+        labels: data.daily.labels,
+        datasets: [{ label: 'Submissions', data: data.daily.counts, tension: .25, fill: false }]
+      },
+      options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
+    });
+
+    const ctxUser = document.getElementById('userChart').getContext('2d');
+    new Chart(ctxUser, {
+      type: 'bar',
+      data: { labels: data.per_user.labels, datasets: [{ label: 'Completed', data: data.per_user.counts }] },
+      options: { indexAxis: 'y', plugins: { legend: { display:false } }, scales: { x: { beginAtZero: true } } }
+    });
+
+    const ctxProj = document.getElementById('projChart').getContext('2d');
+    new Chart(ctxProj, {
+      type: 'bar',
+      data: { labels: data.per_project.labels, datasets: [{ label: 'Completed', data: data.per_project.counts }] },
+      options: { indexAxis: 'y', plugins: { legend: { display:false } }, scales: { x: { beginAtZero: true } } }
+    });
+
+  }catch(err){
+    console.error(err);
+    alert("Failed to load insights.");
+  }
+})();
+</script>
+{% endblock %}
