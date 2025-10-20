@@ -22,7 +22,7 @@
       </form>
     </section>
 
-    <!-- Data Bank + Search (top-right) -->
+    <!-- Data Bank + Live Search (top-right) -->
     <section class="card">
       <div class="card-head">
         <div>
@@ -31,25 +31,25 @@
           <a class="button" href="{{ url_for('admin_schedules') }}">Manage Schedules</a>
         </div>
 
-        <!-- Search users -->
-        <form method="get" action="{{ url_for('admin_panel') }}" class="admin-search">
+        <!-- LIVE search users (no submit) -->
+        <form onsubmit="return false;" class="admin-search">
           <input
+            id="adminLiveSearch"
             type="text"
-            name="q"
-            value="{{ q or '' }}"
             placeholder="Search users…"
+            autocomplete="off"
           >
-          <button class="button">Search</button>
-          {% if q %}
-            <a class="button" href="{{ url_for('admin_panel') }}">Clear</a>
-          {% endif %}
+          <button type="button"
+                  class="button"
+                  onclick="document.getElementById('adminLiveSearch').value=''; window.AdminLiveFilter?.('');">
+            Clear
+          </button>
         </form>
       </div>
 
       <div class="row">
         <a class="button" href="{{ url_for('admin_data_bank') }}">Open Data Bank</a>
         <a class="button" href="{{ url_for('admin_export_csv') }}">Export CSV</a>
-
         <form method="post" action="{{ url_for('admin_clear_bank') }}" onsubmit="return confirm('Clear all logs?');">
           <button class="danger">Clear Bank</button>
         </form>
@@ -61,12 +61,11 @@
   <section class="card">
     <h2>Assign Tasks (per User)</h2>
 
-    {% if users|length == 0 %}
-      <p class="muted">No users match your search.</p>
-    {% endif %}
+    <p id="noMatches" class="muted" style="display:none;">No users match your search.</p>
 
     {% for u in users %}
-      <div class="assign-row">
+      <!-- Add data-user for fast filtering -->
+      <div class="assign-row" data-user="{{ u.name|lower }}">
         <div class="assign-head">
           <div><strong>{{ u.name }}</strong> ({{ 'active' if u.active else 'inactive' }})</div>
           <form method="post" action="{{ url_for('admin_remove_user', user_id=u.id) }}" onsubmit="return confirm('Delete user and all tasks?');">
@@ -98,5 +97,30 @@
       </div>
     {% endfor %}
   </section>
+
+  <!-- tiny script for live filtering -->
+  <script>
+  (function(){
+    const input = document.getElementById('adminLiveSearch');
+    if (!input) return;
+
+    const rows = Array.from(document.querySelectorAll('.assign-row'));
+    const empty = document.getElementById('noMatches');
+
+    window.AdminLiveFilter = function(term){
+      const q = (term ?? input.value).trim().toLowerCase();
+      let visible = 0;
+      for (const row of rows) {
+        const name = row.dataset.user || row.querySelector('.assign-head strong')?.textContent.toLowerCase() || '';
+        const show = !q || name.includes(q);
+        row.style.display = show ? '' : 'none';
+        if (show) visible++;
+      }
+      if (empty) empty.style.display = visible ? 'none' : '';
+    };
+
+    input.addEventListener('input', () => window.AdminLiveFilter());
+  })();
+  </script>
 {% endif %}
 {% endblock %}

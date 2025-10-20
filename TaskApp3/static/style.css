@@ -180,3 +180,11 @@ button.small,.button.small{padding:6px 10px;font-size:.9rem}
   border:1px solid var(--border, #dfe3ea);
   border-radius:10px;
 }
+.card-head{
+  display:flex; gap:16px; align-items:flex-end; justify-content:space-between; margin-bottom:10px;
+}
+.admin-search{ display:flex; gap:8px; align-items:center; margin-left:auto; }
+.admin-search #adminLiveSearch{
+  min-width:260px; height:38px; padding:8px 12px;
+  border:1px solid var(--border, #dfe3ea); border-radius:10px;
+}
