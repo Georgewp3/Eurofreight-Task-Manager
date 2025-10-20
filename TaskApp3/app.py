@@ -3,7 +3,7 @@ import os
 from datetime import datetime, timezone
 from functools import wraps
 from zoneinfo import ZoneInfo
-from sqlalchemy import func
+
 from flask import (
     Flask, render_template, request, redirect, url_for,
     jsonify, session, send_file, flash
@@ -178,28 +178,12 @@ def create_app():
             project=task.project or "-",
             task_title=task.title,
             status=status,
-            comment=comment,
-            timestamp=datetime.utcnow()
+            comment=comment
         )
         db.session.add(entry)
         db.session.commit()
         flash("Entry submitted.", "success")
         return redirect(url_for("user_page"))
-    
-    @app.post("/admin/data-bank/backfill-ts")
-    @admin_required
-    def admin_fix_timestamps():
-        updated = db.session.query(LogEntry) \
-            .filter(LogEntry.timestamp.is_(None)) \
-            .update({LogEntry.timestamp: func.now()}, synchronize_session=False)
-        
-        db.session.commit()
-        flash(f"Backfilled {updated} log rows without timestamps.", "success")
-    return redirect(url_for("admin_data_bank"))
-   
-        
-    
- 
 
     # --- APIs for dynamic UI ---
     @app.get("/api/users")

@@ -9,16 +9,6 @@
   </form>
 </div>
 
-<!-- Right: maintenance action -->
-  <form method="post"
-        action="{{ url_for('admin_fix_timestamps') }}"
-        onsubmit="return confirm('Backfill missing timestamps?');"
-        style="margin-left:auto;">
-    <button class="ghost">Backfill Missing Timestamps</button>
-  </form>
-</div>
-
-
 <table class="table">
   <thead>
     <tr>
