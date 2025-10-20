@@ -186,6 +186,19 @@ def create_app():
         flash("Entry submitted.", "success")
         return redirect(url_for("user_page"))
     
+    @app.post("/admin/data-bank/backfill-ts")
+    @admin_required
+    def admin_backfill_timestamps():
+        # Set any NULL timestamps to "now" (UTC). You can make this smarter if you want.
+        updated = LogEntry.query.filter(LogEntry.timestamp.is_(None)).update(
+        {LogEntry.timestamp: datetime.utcnow()},
+        synchronize_session=False
+        )
+        db.session.commit()
+        flash(f"Backfilled {updated} log rows without timestamps.", "success")
+    return redirect(url_for('admin_data_bank'))
+    
+ 
 
     # --- APIs for dynamic UI ---
     @app.get("/api/users")

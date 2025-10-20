@@ -9,6 +9,11 @@
   </form>
 </div>
 
+<form method="post" action="{{ url_for('admin_backfill_timestamps') }}" onsubmit="return confirm('Backfill missing timestamps?');">
+  <button class="button">Backfill Missing Timestamps</button>
+</form>
+
+
 <table class="table">
   <thead>
     <tr>
