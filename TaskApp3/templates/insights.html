@@ -5,11 +5,26 @@
 <section class="card">
   <h2>Key Metrics</h2>
   <div class="kpi-grid">
-    <div class="kpi"><div class="kpi-label">Total Submissions</div><div id="kpiTotal" class="kpi-value">—</div></div>
-    <div class="kpi"><div class="kpi-label">Completed</div><div id="kpiCompleted" class="kpi-value">—</div></div>
-    <div class="kpi"><div class="kpi-label">Completion Rate</div><div id="kpiRate" class="kpi-value">—%</div></div>
-    <div class="kpi"><div class="kpi-label">Not Done w/ Comment</div><div id="kpiNdc" class="kpi-value">—</div></div>
-    <div class="kpi"><div class="kpi-label">Last 7d Completion</div><div id="kpiLast7" class="kpi-value">—%</div></div>
+    <div class="kpi">
+      <div class="kpi-label">Total Submissions</div>
+      <div id="kpiTotal" class="kpi-value">—</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">Completed</div>
+      <div id="kpiCompleted" class="kpi-value">—</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">Completion Rate</div>
+      <div id="kpiRate" class="kpi-value">—%</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">Not Done w/ Comment</div>
+      <div id="kpiNdc" class="kpi-value">—</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">Last 7d Completion</div>
+      <div id="kpiLast7" class="kpi-value">—%</div>
+    </div>
   </div>
 </section>
 
@@ -29,22 +44,30 @@
   </section>
 </section>
 
-<!-- Chart.js from CDN -->
+<!-- Chart.js -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <script>
 (async function(){
-  try{
+  const fmtPct = v => (Number.isFinite(v) ? Number(v).toFixed(1) : "0.0");
+
+  try {
     const res = await fetch("{{ url_for('admin_insights_data') }}", { credentials: "include" });
+    if (!res.ok) {
+      const text = await res.text();
+      console.error("Insights API failed:", res.status, text);
+      alert("Failed to load insights (" + res.status + "). Check server logs.");
+      return;
+    }
     const data = await res.json();
 
-    // KPIs
-    document.getElementById('kpiTotal').textContent    = data.kpis.total_submissions;
-    document.getElementById('kpiCompleted').textContent= data.kpis.completed;
-    document.getElementById('kpiRate').textContent     = data.kpis.completion_rate + "%";
-    document.getElementById('kpiNdc').textContent      = data.kpis.not_done_with_comment;
-    document.getElementById('kpiLast7').textContent    = data.kpis.last7_rate + "%";
+    // ----- KPIs -----
+    document.getElementById('kpiTotal').textContent     = data.kpis.total_submissions;
+    document.getElementById('kpiCompleted').textContent = data.kpis.completed;
+    document.getElementById('kpiRate').textContent      = fmtPct(data.kpis.completion_rate) + "%";
+    document.getElementById('kpiNdc').textContent       = data.kpis.not_done_with_comment;
+    document.getElementById('kpiLast7').textContent     = fmtPct(data.kpis.last7_rate) + "%";
 
-    // Charts
+    // ----- Charts -----
     const ctxDaily = document.getElementById('dailyChart').getContext('2d');
     new Chart(ctxDaily, {
       type: 'line',
@@ -52,27 +75,60 @@
         labels: data.daily.labels,
         datasets: [{ label: 'Submissions', data: data.daily.counts, tension: .25, fill: false }]
       },
-      options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
+      options: {
+        responsive: true,
+        plugins: { legend: { display: false } },
+        scales: { y: { beginAtZero: true, ticks: { precision: 0 } } }
+      }
     });
 
     const ctxUser = document.getElementById('userChart').getContext('2d');
     new Chart(ctxUser, {
       type: 'bar',
       data: { labels: data.per_user.labels, datasets: [{ label: 'Completed', data: data.per_user.counts }] },
-      options: { indexAxis: 'y', plugins: { legend: { display:false } }, scales: { x: { beginAtZero: true } } }
+      options: {
+        indexAxis: 'y',
+        plugins: { legend: { display: false } },
+        scales: { x: { beginAtZero: true, ticks: { precision: 0 } } }
+      }
     });
 
     const ctxProj = document.getElementById('projChart').getContext('2d');
     new Chart(ctxProj, {
       type: 'bar',
       data: { labels: data.per_project.labels, datasets: [{ label: 'Completed', data: data.per_project.counts }] },
-      options: { indexAxis: 'y', plugins: { legend: { display:false } }, scales: { x: { beginAtZero: true } } }
+      options: {
+        indexAxis: 'y',
+        plugins: { legend: { display: false } },
+        scales: { x: { beginAtZero: true, ticks: { precision: 0 } } }
+      }
     });
 
-  }catch(err){
+  } catch (err) {
     console.error(err);
     alert("Failed to load insights.");
   }
 })();
 </script>
+
+<style>
+/* Page-local styles (or move to style.css) */
+.kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(140px, 1fr));
+  gap: 12px;
+  margin-top: 8px;
+}
+.kpi {
+  background: var(--surface, #f6f8fb);
+  border: 1px solid var(--border, #e3e7ef);
+  border-radius: 12px;
+  padding: 14px;
+}
+.kpi-label { font-size: .9rem; color: #6c7788; }
+.kpi-value { font-size: 1.6rem; font-weight: 700; margin-top: 4px; }
+@media (max-width: 900px) {
+  .kpi-grid { grid-template-columns: repeat(2, minmax(140px, 1fr)); }
+}
+</style>
 {% endblock %}
