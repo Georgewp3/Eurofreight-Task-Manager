@@ -98,33 +98,56 @@ def create_app():
             func.length(func.coalesce(LogEntry.comment, "")) > 0
         ).scalar() or 0
 
+        # --- Dialect-aware "day" bucketing ------------------------
+        dialect = db.session.bind.dialect.name
+        if dialect == "sqlite":
+            day_expr = func.strftime('%Y-%m-%d', LogEntry.timestamp)
+        else:
+            day_expr = func.date_trunc('day', LogEntry.timestamp)
+
         #Daily submissions (last 30 days)
-        daily_rows = db.session.query(
-            func.date(LogEntry.timestamp).label("day"),
-            func.count(LogEntry.id)
-        ).filter(LogEntry.timestamp >= d30)\
-         .group_by(func.date(LogEntry.timestamp))\
-         .order_by(func.date(LogEntry.timestamp)).all()
+        daily_rows = (
+            db.session.query(day_expr.label("day"), func.count(LogEntry.id))
+            .filter(LogEntry.timestamp.isnot(None), LogEntry.timestamp >= d30)
+            .group_by("day")
+            .order_by("day")
+            .all()
+        )
+
+        #Normalize labels to 'YYYY-MM-DD'
+        daily_labels = []
+        daily_counts = []
+        for day, cnt in daily_rows:
+            if dialect == "sqlite":
+                label = str(day) 
+            else:
+                label = day.date().isoformat()
+            daily_labels.append(label)
+            daily_counts.append(int(cnt))
         
-        # Per-user completions (last 30 days)
-        per_user_rows = db.session.query(
-            LogEntry.user_name,
-            func.count(LogEntry.id)
-        ).filter(
-            LogEntry.timestamp >= d30,
-            LogEntry.status == "COMPLETED"
-        ).group_by(LogEntry.user_name)\
-        .order_by(func.count(LogEntry.id).desc()).limit(10).all()
+        # Per-user completions (last 30 days) 
+        per_user_rows = (
+            db.session.query(LogEntry.user_name, func.count(LogEntry.id))
+            .filter(LogEntry.timestamp >= d30, LogEntry.status == "COMPLETED")
+            .group_by(LogEntry.user_name)
+            .order_by(func.count(LogEntry.id).desc())
+            .limit(10)
+            .all()
+        )
+        user_labels = [r[0] for r in per_user_rows]
+        user_counts = [int(r[1]) for r in per_user_rows]
 
         # Per-project completions (last 30 days)
-        per_proj_rows = db.session.query(
-             func.coalesce(LogEntry.project, "-"),
-             func.count(LogEntry.id)
-        ).filter(
-            LogEntry.timestamp >= d30,
-            LogEntry.status == "COMPLETED"
-        ).group_by(func.coalesce(LogEntry.project, "-"))\
-         .order_by(func.count(LogEntry.id).desc()).limit(10).all()
+        per_proj_rows = (
+            db.session.query(func.coalesce(LogEntry.project, "-"), func.count(LogEntry.id))
+            .filter(LogEntry.timestamp >= d30, LogEntry.status == "COMPLETED")
+            .group_by(func.coalesce(LogEntry.project, "-"))
+            .order_by(func.count(LogEntry.id).desc())
+            .limit(10)
+            .all()
+        )
+        proj_labels = [r[0] for r in per_proj_rows]
+        proj_counts = [int(r[1]) for r in per_proj_rows]
         
         # Last 7 days completion rate
         last7_total = db.session.query(func.count(LogEntry.id)).filter(
@@ -136,15 +159,6 @@ def create_app():
         ).scalar() or 0
         last7_rate = (last7_completed / last7_total * 100.0) if last7_total else 0.0
 
-        # Build arrays for charts
-        daily_labels = [str(r[0]) for r in daily_rows]
-        daily_counts = [int(r[1]) for r in daily_rows]
-
-        user_labels  = [r[0] for r in per_user_rows]
-        user_counts  = [int(r[1]) for r in per_user_rows]
-
-        proj_labels  = [r[0] for r in per_proj_rows]
-        proj_counts  = [int(r[1]) for r in per_proj_rows]
 
         return jsonify({
             "kpis": {
