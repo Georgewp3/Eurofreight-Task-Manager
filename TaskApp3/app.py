@@ -3,7 +3,7 @@ import os
 from datetime import datetime, timezone, timedelta
 from functools import wraps
 from zoneinfo import ZoneInfo
-from sqlalchemy import func, case
+from sqlalchemy import func, cast, Date
 
 from flask import (
     Flask, render_template, request, redirect, url_for,
@@ -99,13 +99,7 @@ def create_app():
         ).scalar() or 0
 
         # --- Dialect-aware "day" bucketing ------------------------
-        dialect = db.session.bind.dialect.name
-        if dialect == "sqlite":
-            day_expr = func.strftime('%Y-%m-%d', LogEntry.timestamp)
-        else:
-            day_expr = func.date_trunc('day', LogEntry.timestamp)
-
-        #Daily submissions (last 30 days)
+        day_expr = cast(LogEntry.timestamp, Date)
         daily_rows = (
             db.session.query(day_expr.label("day"), func.count(LogEntry.id))
             .filter(LogEntry.timestamp.isnot(None), LogEntry.timestamp >= d30)
@@ -113,18 +107,9 @@ def create_app():
             .order_by("day")
             .all()
         )
+        daily_labels = [r[0].date().isoformat() for r in daily_rows]
+        daily_counts = [int(r[1]) for r in daily_rows]
 
-        #Normalize labels to 'YYYY-MM-DD'
-        daily_labels = []
-        daily_counts = []
-        for day, cnt in daily_rows:
-            if dialect == "sqlite":
-                label = str(day) 
-            else:
-                label = day.date().isoformat()
-            daily_labels.append(label)
-            daily_counts.append(int(cnt))
-        
         # Per-user completions (last 30 days) 
         per_user_rows = (
             db.session.query(LogEntry.user_name, func.count(LogEntry.id))
