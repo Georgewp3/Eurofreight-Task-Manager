@@ -178,7 +178,8 @@ def create_app():
             project=task.project or "-",
             task_title=task.title,
             status=status,
-            comment=comment
+            comment=comment,
+            timestamp=datetime.utcnow(),
         )
         db.session.add(entry)
         db.session.commit()
@@ -302,13 +303,14 @@ def create_app():
         filepath = os.path.join(os.path.dirname(__file__), filename)
 
         logs = LogEntry.query.order_by(LogEntry.timestamp.asc()).all()
-        cy = ZoneInfo("Europe/Nicosia")  # Cyprus time
+        cy = ZoneInfo("Europe/Nicosia")  
 
         with open(filepath, "w", newline="", encoding="utf-8") as f:
             writer = csv.writer(f)
             writer.writerow(["User", "Project", "Task", "Status", "Timestamp", "Comment"])
             for row in logs:
-                ts_local = row.timestamp.replace(tzinfo=timezone.utc).astimezone(cy)
+                ts = row.timestamp or datetime.utcnow()
+                ts_local = ts.replace(tzinfo=timezone.utc).astimezone(cy)
                 writer.writerow([
                 row.user_name,
                 row.project,
