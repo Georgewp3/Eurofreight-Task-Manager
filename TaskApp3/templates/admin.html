@@ -13,16 +13,28 @@
   <h1 class="page-title">Admin Panel — Assign Tasks</h1>
 
   <div class="grid two">
-    <!-- Add User -->
+    <!-- Add User + LIVE SEARCH (moved here) -->
     <section class="card">
       <h2>Add User</h2>
       <form method="post" action="{{ url_for('admin_add_user') }}">
         <input type="text" name="full_name" placeholder="Full name" required>
         <button class="primary">Add User</button>
       </form>
+
+      <!-- Live user search sits right under the green button -->
+      <div class="live-search-wrap">
+        <label for="adminLiveSearch" class="muted" style="display:block; margin:14px 0 6px;">Search users</label>
+        <form onsubmit="return false;" class="admin-search">
+          <input id="adminLiveSearch" type="text" placeholder="Search users…" autocomplete="off">
+          <button type="button" class="button"
+                  onclick="document.getElementById('adminLiveSearch').value=''; window.AdminLiveFilter?.('');">
+            Clear
+          </button>
+        </form>
+      </div>
     </section>
 
-    <!-- Data Bank + Live Search (top-right) -->
+    <!-- Data Bank (search removed from here) -->
     <section class="card">
       <div class="card-head">
         <div>
@@ -30,21 +42,6 @@
           <p>View submissions, export CSV, or clear logs.</p>
           <a class="button" href="{{ url_for('admin_schedules') }}">Manage Schedules</a>
         </div>
-
-        <!-- LIVE search users (no submit) -->
-        <form onsubmit="return false;" class="admin-search">
-          <input
-            id="adminLiveSearch"
-            type="text"
-            placeholder="Search users…"
-            autocomplete="off"
-          >
-          <button type="button"
-                  class="button"
-                  onclick="document.getElementById('adminLiveSearch').value=''; window.AdminLiveFilter?.('');">
-            Clear
-          </button>
-        </form>
       </div>
 
       <div class="row">
@@ -64,7 +61,7 @@
     <p id="noMatches" class="muted" style="display:none;">No users match your search.</p>
 
     {% for u in users %}
-      <!-- Add data-user for fast filtering -->
+      <!-- data-user enables lightning-fast filtering -->
       <div class="assign-row" data-user="{{ u.name|lower }}">
         <div class="assign-head">
           <div><strong>{{ u.name }}</strong> ({{ 'active' if u.active else 'inactive' }})</div>
