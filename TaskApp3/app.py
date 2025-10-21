@@ -109,7 +109,7 @@ def create_app():
             daily_rows = (
                 db.session.query(day_expr.label("day"), func.count(LogEntry.id))
                 .filter(LogEntry.timestamp.isnot(None), LogEntry.timestamp >= d30)
-                .group_by("day").order_by("day").all()
+                .group_by("day_expr").order_by("day_expr").all()
             )
             daily_labels = [d for d, _ in daily_rows]
             daily_counts = [int(c) for _, c in daily_rows]
@@ -119,7 +119,7 @@ def create_app():
             daily_rows = (
                 db.session.query(day_expr.label("day"), func.count(LogEntry.id))
                 .filter(LogEntry.timestamp.isnot(None), LogEntry.timestamp >= d30)
-                .group_by("day").order_by("day").all()
+                .group_by("day_expr").order_by("day_expr").all()
             )
             daily_labels = [d.isoformat() for d, _ in daily_rows]
             daily_counts = [int(c) for _, c in daily_rows]
@@ -141,22 +141,24 @@ def create_app():
         user_counts = [int(r[1]) for r in per_user_rows]
         
         # Per-project completions (last 30 days)
+        proj_key = func.coalesce(LogEntry.project, "-")
+
         per_proj_rows = (
-            db.session.query(func.coalesce(LogEntry.project, "-"), func.count(LogEntry.id))
+            db.session.query(proj_key.label("project"), func.count(LogEntry.id))
             .filter(
                 LogEntry.timestamp.isnot(None),
                 LogEntry.timestamp >= d30,
                 LogEntry.status == "COMPLETED",
             )
-            .group_by(func.coalesce(LogEntry.project, "-"))
+            .group_by(proj_key)
             .order_by(func.count(LogEntry.id).desc())
             .limit(10)
             .all()
         )
         proj_labels = [r[0] for r in per_proj_rows]
         proj_counts = [int(r[1]) for r in per_proj_rows]
-    
-        
+
+
         # Last 7 days completion rate
         last7_total = (
             db.session.query(func.count(LogEntry.id))
