@@ -105,24 +105,26 @@ def create_app():
 
         if dialect == "sqlite":
             # SQLite likes strftime for day-bucketing
-            day_expr = func.strftime('%Y-%m-%d', LogEntry.timestamp)
-            daily_rows = (
-                db.session.query(day_expr.label("day"), func.count(LogEntry.id))
-                .filter(LogEntry.timestamp.isnot(None), LogEntry.timestamp >= d30)
-                .group_by("day_expr").order_by("day_expr").all()
-            )
-            daily_labels = [d for d, _ in daily_rows]
-            daily_counts = [int(c) for _, c in daily_rows]
+            day_expr = func.strftime('%Y-%m-%d', LogEntry.timestamp).label("day")
         else:
-            # Postgres: CAST to DATE
-            day_expr = cast(LogEntry.timestamp, Date)
-            daily_rows = (
-                db.session.query(day_expr.label("day"), func.count(LogEntry.id))
-                .filter(LogEntry.timestamp.isnot(None), LogEntry.timestamp >= d30)
-                .group_by("day_expr").order_by("day_expr").all()
-            )
-            daily_labels = [d.isoformat() for d, _ in daily_rows]
-            daily_counts = [int(c) for _, c in daily_rows]
+            # Postgres (and others): cast timestamp to DATE
+            day_col = cast(LogEntry.timestamp, Date).label("day")
+
+        daily_rows = (
+            db.session.query(day_col, func.count(LogEntry.id))
+            .filter(LogEntry.timestamp.isnot(None), LogEntry.timestamp >= d30)
+            .group_by(day_col)
+            .order_by(day_col)
+            .all()
+        )
+
+        dadaily_labels = [
+            d if isinstance(d, str) else d.isoformat()
+            for (d, _) in daily_rows
+        ]
+        daily_counts = [int(c) for (_, c) in daily_rows]
+
+            
 
         # Per-user completions (last 30 days) 
         per_user_rows = (
