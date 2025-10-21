@@ -118,13 +118,11 @@ def create_app():
             .all()
         )
 
-        dadaily_labels = [
+        daily_labels = [
             d if isinstance(d, str) else d.isoformat()
             for (d, _) in daily_rows
         ]
         daily_counts = [int(c) for (_, c) in daily_rows]
-
-            
 
         # Per-user completions (last 30 days) 
         per_user_rows = (
