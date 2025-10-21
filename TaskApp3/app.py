@@ -4,8 +4,6 @@ from datetime import datetime, timezone, timedelta
 from functools import wraps
 from zoneinfo import ZoneInfo
 from sqlalchemy import func, cast, Date
-from datetime import timedelta
-from sqlalchemy import func, cast, Date, text
 from sqlalchemy.exc import SQLAlchemyError
 
 from flask import (
@@ -102,9 +100,11 @@ def create_app():
         ).scalar() or 0
 
         # --- Dialect-aware "day" bucketing ------------------------
-        dialect = db.session.bind.dialect.name  # 'sqlite' locally, 'postgresql' on Render
+        bind = db.session.get_bind()
+        dialect = (bind.dialect.name if bind is not None else "postgresql")
 
         if dialect == "sqlite":
+            # SQLite likes strftime for day-bucketing
             day_expr = func.strftime('%Y-%m-%d', LogEntry.timestamp)
             daily_rows = (
                 db.session.query(day_expr.label("day"), func.count(LogEntry.id))
@@ -114,7 +114,7 @@ def create_app():
             daily_labels = [d for d, _ in daily_rows]
             daily_counts = [int(c) for _, c in daily_rows]
         else:
-
+            # Postgres: CAST to DATE
             day_expr = cast(LogEntry.timestamp, Date)
             daily_rows = (
                 db.session.query(day_expr.label("day"), func.count(LogEntry.id))
@@ -127,22 +127,35 @@ def create_app():
         # Per-user completions (last 30 days) 
         per_user_rows = (
             db.session.query(LogEntry.user_name, func.count(LogEntry.id))
-            .filter(LogEntry.timestamp.isnot(None),
-                    LogEntry.timestamp >= d30,
-                    LogEntry.status == "COMPLETED")
+            .filter(
+                LogEntry.timestamp.isnot(None),
+                LogEntry.timestamp >= d30,
+                LogEntry.status == "COMPLETED",
+            )
+            .group_by(LogEntry.user_name)
+            .order_by(func.count(LogEntry.id).desc())
+            .limit(10)
+            .all()
         )
         user_labels = [r[0] for r in per_user_rows]
         user_counts = [int(r[1]) for r in per_user_rows]
-
+        
         # Per-project completions (last 30 days)
         per_proj_rows = (
             db.session.query(func.coalesce(LogEntry.project, "-"), func.count(LogEntry.id))
-            .filter(LogEntry.timestamp.isnot(None),
-                    LogEntry.timestamp >= d30,
-                    LogEntry.status == "COMPLETED")
+            .filter(
+                LogEntry.timestamp.isnot(None),
+                LogEntry.timestamp >= d30,
+                LogEntry.status == "COMPLETED",
+            )
+            .group_by(func.coalesce(LogEntry.project, "-"))
+            .order_by(func.count(LogEntry.id).desc())
+            .limit(10)
+            .all()
         )
         proj_labels = [r[0] for r in per_proj_rows]
         proj_counts = [int(r[1]) for r in per_proj_rows]
+    
         
         # Last 7 days completion rate
         last7_total = (
