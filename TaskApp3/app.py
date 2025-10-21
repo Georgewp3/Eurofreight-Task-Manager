@@ -66,7 +66,7 @@ def create_app():
         @wraps(f)
         def wrapper(*args, **kwargs):
           if session.get("is_admin") is True:
-              return f(*args, **kwargs)
+               return f(*args, **kwargs)
           return redirect(url_for("admin_login"))
         return wrapper
     
@@ -102,16 +102,27 @@ def create_app():
         ).scalar() or 0
 
         # --- Dialect-aware "day" bucketing ------------------------
-        day_expr = cast(LogEntry.timestamp, Date)
-        daily_rows = (
-            db.session.query(day_expr.label("day"), func.count(LogEntry.id))
-            .filter(LogEntry.timestamp.isnot(None), LogEntry.timestamp >= d30)
-            .group_by("day")
-            .order_by("day")
-            .all()
-        )
-        daily_labels = [r[0].isoformat() for r in daily_rows]
-        daily_counts = [int(r[1]) for r in daily_rows]
+        dialect = db.session.bind.dialect.name  # 'sqlite' locally, 'postgresql' on Render
+
+        if dialect == "sqlite":
+            day_expr = func.strftime('%Y-%m-%d', LogEntry.timestamp)
+            daily_rows = (
+                db.session.query(day_expr.label("day"), func.count(LogEntry.id))
+                .filter(LogEntry.timestamp.isnot(None), LogEntry.timestamp >= d30)
+                .group_by("day").order_by("day").all()
+            )
+            daily_labels = [d for d, _ in daily_rows]
+            daily_counts = [int(c) for _, c in daily_rows]
+        else:
+
+            day_expr = cast(LogEntry.timestamp, Date)
+            daily_rows = (
+                db.session.query(day_expr.label("day"), func.count(LogEntry.id))
+                .filter(LogEntry.timestamp.isnot(None), LogEntry.timestamp >= d30)
+                .group_by("day").order_by("day").all()
+            )
+            daily_labels = [d.isoformat() for d, _ in daily_rows]
+            daily_counts = [int(c) for _, c in daily_rows]
 
         # Per-user completions (last 30 days) 
         per_user_rows = (
