@@ -110,25 +110,4 @@
   }
 })();
 </script>
-
-<style>
-/* Page-local styles (or move to style.css) */
-.kpi-grid {
-  display: grid;
-  grid-template-columns: repeat(5, minmax(140px, 1fr));
-  gap: 12px;
-  margin-top: 8px;
-}
-.kpi {
-  background: var(--surface, #f6f8fb);
-  border: 1px solid var(--border, #e3e7ef);
-  border-radius: 12px;
-  padding: 14px;
-}
-.kpi-label { font-size: .9rem; color: #6c7788; }
-.kpi-value { font-size: 1.6rem; font-weight: 700; margin-top: 4px; }
-@media (max-width: 900px) {
-  .kpi-grid { grid-template-columns: repeat(2, minmax(140px, 1fr)); }
-}
-</style>
 {% endblock %}
