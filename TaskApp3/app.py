@@ -298,7 +298,7 @@ def create_app():
             task_title=task.title,
             status=status,
             comment=comment,
-            timestamp=datetime.utcnow(),
+            timestamp=datetime.now.utcnow(),
         )
         db.session.add(entry)
         db.session.commit()
