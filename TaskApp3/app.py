@@ -5,6 +5,7 @@ from functools import wraps
 from zoneinfo import ZoneInfo
 from sqlalchemy import func, cast, Date
 from sqlalchemy.exc import SQLAlchemyError
+from pathlib import Path
 
 from flask import (
     Flask, render_template, request, redirect, url_for,
@@ -20,19 +21,19 @@ ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "332133")  # fixed as requested
 
 def _resolve_db_uri() -> str:
     db_url = os.getenv("DATABASE_URL")
-    if not db_url:
-        raise RuntimeError("DATABASE_URL is not set. Configure it in Render → Environment.")
 
-    # Force psycopg3 driver for SQLAlchemy
-    if db_url.startswith("postgres://"):
-        db_url = db_url.replace("postgres://", "postgresql+psycopg://", 1)
-    elif db_url.startswith("postgresql://"):
-        db_url = db_url.replace("postgresql://", "postgresql+psycopg://", 1)
-
-    # Ensure SSL for hosted DBs
-    if "sslmode=" not in db_url:
-        db_url += ("&" if "?" in db_url else "?") + "sslmode=require"
-    return db_url
+    # Prefer Postgres if DATABASE_URL is set (Render)
+    if db_url:
+        if db_url.startswith("postgres://"):
+            db_url = db_url.replace("postgres://", "postgresql+psycopg://", 1)
+        elif db_url.startswith("postgresql://"):
+            db_url = db_url.replace("postgresql://", "postgresql+psycopg://", 1)
+        if "sslmode=" not in db_url and db_url.startswith("postgresql+psycopg://"):
+            db_url += ("&" if "?" in db_url else "?") + "sslmode=require"
+        return db_url
+    
+    sqlite_path = Path(__file__).with_name("task_db.sqlite3")
+    return f"sqlite:///{sqlite_path.as_posix()}"
 
 
 
@@ -101,11 +102,11 @@ def create_app():
 
         # --- Dialect-aware "day" bucketing ------------------------
         bind = db.session.get_bind()
-        dialect = (bind.dialect.name if bind is not None else "postgresql")
+        dialect = (bind.dialect.name if bind else "postgresql")
 
         if dialect == "sqlite":
             # SQLite likes strftime for day-bucketing
-            day_expr = func.strftime('%Y-%m-%d', LogEntry.timestamp).label("day")
+            day_col = func.strftime('%Y-%m-%d', LogEntry.timestamp).label("day")
         else:
             # Postgres (and others): cast timestamp to DATE
             day_col = cast(LogEntry.timestamp, Date).label("day")
@@ -298,7 +299,7 @@ def create_app():
             task_title=task.title,
             status=status,
             comment=comment,
-            timestamp=datetime.now.utcnow(),
+            timestamp=datetime.utcnow(),
         )
         db.session.add(entry)
         db.session.commit()
