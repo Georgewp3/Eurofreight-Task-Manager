@@ -1,45 +1,63 @@
 {% extends "base.html" %}
 {% block content %}
-<h1 class="page-title">Insights</h1>
+<h1 class="page-title flex-between">
+  <span>Insights</span>
+  <span class="pill soft">last 30 days</span>
+</h1>
 
-<section class="card">
-  <h2>Key Metrics</h2>
-  <div class="kpi-grid">
-    <div class="kpi">
-      <div class="kpi-label">Total Submissions</div>
-      <div id="kpiTotal" class="kpi-value">—</div>
+<!-- KPI CARDS -->
+<section class="kpi-grid">
+  <div class="kpi kpi--indigo">
+    <div class="kpi-label">Total Submissions</div>
+    <div class="kpi-value" id="kpiTotal">—</div>
+  </div>
+
+  <div class="kpi kpi--green">
+    <div class="kpi-label">Completed</div>
+    <div class="kpi-value" id="kpiCompleted">—</div>
+  </div>
+
+  <div class="kpi kpi--blue">
+    <div class="kpi-label">Completion Rate</div>
+    <div class="kpi-value"><span id="kpiRate">—%</span>
+      <span class="trend" id="kpiRateTrend">—</span>
     </div>
-    <div class="kpi">
-      <div class="kpi-label">Completed</div>
-      <div id="kpiCompleted" class="kpi-value">—</div>
-    </div>
-    <div class="kpi">
-      <div class="kpi-label">Completion Rate</div>
-      <div id="kpiRate" class="kpi-value">—%</div>
-    </div>
-    <div class="kpi">
-      <div class="kpi-label">Not Done w/ Comment</div>
-      <div id="kpiNdc" class="kpi-value">—</div>
-    </div>
-    <div class="kpi">
-      <div class="kpi-label">Last 7d Completion</div>
-      <div id="kpiLast7" class="kpi-value">—%</div>
-    </div>
+  </div>
+
+  <div class="kpi kpi--amber">
+    <div class="kpi-label">Not Done w/ Comment</div>
+    <div class="kpi-value" id="kpiNdc">—</div>
+  </div>
+
+  <div class="kpi kpi--purple">
+    <div class="kpi-label">Last 7d Completion</div>
+    <div class="kpi-value" id="kpiLast7">—%</div>
   </div>
 </section>
 
-<section class="card">
-  <h2>Activity — Last 30 Days</h2>
+<!-- CHARTS -->
+<section class="card pretty">
+  <div class="card-head">
+    <h2>Activity — Last 30 Days</h2>
+    <span class="chip">submissions per day</span>
+  </div>
   <canvas id="dailyChart" height="110"></canvas>
 </section>
 
 <section class="grid two">
-  <section class="card">
-    <h2>Top Users (Completed)</h2>
+  <section class="card pretty">
+    <div class="card-head">
+      <h2>Top Users (Completed)</h2>
+      <span class="chip">max 10</span>
+    </div>
     <canvas id="userChart" height="180"></canvas>
   </section>
-  <section class="card">
-    <h2>Top Projects (Completed)</h2>
+
+  <section class="card pretty">
+    <div class="card-head">
+      <h2>Top Projects (Completed)</h2>
+      <span class="chip">max 10</span>
+    </div>
     <canvas id="projChart" height="180"></canvas>
   </section>
 </section>
@@ -47,60 +65,131 @@
 <!-- Chart.js -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <script>
-(async function(){
+(async function () {
   const fmtPct = v => (Number.isFinite(v) ? Number(v).toFixed(1) : "0.0");
 
   try {
     const res = await fetch("{{ url_for('admin_insights_data') }}", { credentials: "include" });
     if (!res.ok) {
-      const text = await res.text();
-      console.error("Insights API failed:", res.status, text);
+      console.error("Insights API failed:", res.status, await res.text());
       alert("Failed to load insights (" + res.status + "). Check server logs.");
       return;
     }
     const data = await res.json();
 
     // ----- KPIs -----
-    document.getElementById('kpiTotal').textContent     = data.kpis.total_submissions;
-    document.getElementById('kpiCompleted').textContent = data.kpis.completed;
-    document.getElementById('kpiRate').textContent      = fmtPct(data.kpis.completion_rate) + "%";
-    document.getElementById('kpiNdc').textContent       = data.kpis.not_done_with_comment;
-    document.getElementById('kpiLast7').textContent     = fmtPct(data.kpis.last7_rate) + "%";
+    const rate = Number(data.kpis.completion_rate || 0);
+    const last7 = Number(data.kpis.last7_rate || 0);
+    const delta = last7 - rate;
 
-    // ----- Charts -----
-    const ctxDaily = document.getElementById('dailyChart').getContext('2d');
-    new Chart(ctxDaily, {
-      type: 'line',
+    document.getElementById("kpiTotal").textContent     = data.kpis.total_submissions;
+    document.getElementById("kpiCompleted").textContent = data.kpis.completed;
+    document.getElementById("kpiRate").textContent      = fmtPct(rate) + "%";
+    document.getElementById("kpiNdc").textContent       = data.kpis.not_done_with_comment;
+    document.getElementById("kpiLast7").textContent     = fmtPct(last7) + "%";
+
+    const trendEl = document.getElementById("kpiRateTrend");
+    if (delta > 0.05) {
+      trendEl.textContent = "▲ +" + fmtPct(delta) + "%";
+      trendEl.classList.add("up");
+    } else if (delta < -0.05) {
+      trendEl.textContent = "▼ " + fmtPct(delta) + "%";
+      trendEl.classList.add("down");
+    } else {
+      trendEl.textContent = "• stable";
+    }
+
+    // ----- Chart.js defaults to match your UI -----
+    Chart.defaults.font.family = "Inter, system-ui, Segoe UI, Roboto, Helvetica, Arial, sans-serif";
+    Chart.defaults.color = getComputedStyle(document.documentElement).getPropertyValue("--muted") || "#6b7280";
+    const gridColor = "rgba(148,163,184,.25)";
+
+    // Helper to build a gradient fill
+    const makeLineGradient = (ctx, topHex, bottomTransparentRGBA) => {
+      const grad = ctx.createLinearGradient(0, 0, 0, 220);
+      grad.addColorStop(0, topHex);
+      grad.addColorStop(1, bottomTransparentRGBA);
+      return grad;
+    };
+
+    // DAILY LINE
+    const dailyCtx = document.getElementById("dailyChart").getContext("2d");
+    const dailyGradient = makeLineGradient(dailyCtx, "#6366F1", "rgba(99,102,241,0.05)");
+
+    new Chart(dailyCtx, {
+      type: "line",
       data: {
         labels: data.daily.labels,
-        datasets: [{ label: 'Submissions', data: data.daily.counts, tension: .25, fill: false }]
+        datasets: [{
+          label: "Submissions",
+          data: data.daily.counts,
+          borderColor: "#6366F1",
+          backgroundColor: dailyGradient,
+          tension: .35,
+          borderWidth: 2.5,
+          fill: true,
+          pointRadius: 0,
+          pointHoverRadius: 4
+        }]
       },
       options: {
         responsive: true,
-        plugins: { legend: { display: false } },
-        scales: { y: { beginAtZero: true, ticks: { precision: 0 } } }
+        plugins: { legend: { display: false }, tooltip: { mode: "index", intersect: false } },
+        scales: {
+          x: { grid: { display: false } },
+          y: { beginAtZero: true, ticks: { precision: 0 }, grid: { color: gridColor } }
+        }
       }
     });
 
-    const ctxUser = document.getElementById('userChart').getContext('2d');
-    new Chart(ctxUser, {
-      type: 'bar',
-      data: { labels: data.per_user.labels, datasets: [{ label: 'Completed', data: data.per_user.counts }] },
+    // BAR COLORS
+    const palette = ["#22C55E","#3B82F6","#A78BFA","#F59E0B","#EF4444","#06B6D4","#84CC16","#F97316","#E879F9","#0EA5E9"];
+
+    // USERS (HORIZONTAL BAR)
+    const userCtx = document.getElementById("userChart").getContext("2d");
+    new Chart(userCtx, {
+      type: "bar",
+      data: {
+        labels: data.per_user.labels,
+        datasets: [{
+          label: "Completed",
+          data: data.per_user.counts,
+          backgroundColor: palette,
+          borderRadius: 10,
+          borderSkipped: false
+        }]
+      },
       options: {
-        indexAxis: 'y',
+        indexAxis: "y",
         plugins: { legend: { display: false } },
-        scales: { x: { beginAtZero: true, ticks: { precision: 0 } } }
+        scales: {
+          x: { beginAtZero: true, ticks: { precision: 0 }, grid: { color: gridColor } },
+          y: { grid: { display: false } }
+        }
       }
     });
 
-    const ctxProj = document.getElementById('projChart').getContext('2d');
-    new Chart(ctxProj, {
-      type: 'bar',
-      data: { labels: data.per_project.labels, datasets: [{ label: 'Completed', data: data.per_project.counts }] },
+    // PROJECTS (HORIZONTAL BAR)
+    const projCtx = document.getElementById("projChart").getContext("2d");
+    new Chart(projCtx, {
+      type: "bar",
+      data: {
+        labels: data.per_project.labels,
+        datasets: [{
+          label: "Completed",
+          data: data.per_project.counts,
+          backgroundColor: palette,
+          borderRadius: 10,
+          borderSkipped: false
+        }]
+      },
       options: {
-        indexAxis: 'y',
+        indexAxis: "y",
         plugins: { legend: { display: false } },
-        scales: { x: { beginAtZero: true, ticks: { precision: 0 } } }
+        scales: {
+          x: { beginAtZero: true, ticks: { precision: 0 }, grid: { color: gridColor } },
+          y: { grid: { display: false } }
+        }
       }
     });
 
@@ -110,4 +199,58 @@
   }
 })();
 </script>
+
+<!-- Page-local styles (kept here so you don't need to touch style.css) -->
+<style>
+:root{
+  --indigo: #6366F1; --green:#22C55E; --blue:#3B82F6; --amber:#F59E0B; --purple:#A78BFA;
+  --surface:#0f172a08; --surface-strong:#0f172a0f;
+  --border:#e5e7eb; --muted:#6b7280;
+}
+.flex-between{display:flex;justify-content:space-between;align-items:center;gap:.75rem;}
+.pill{padding:.35rem .6rem;border-radius:999px;font-size:.8rem;border:1px solid var(--border)}
+.pill.soft{background:var(--surface-strong)}
+.chip{font-size:.75rem;padding:.25rem .5rem;border:1px dashed var(--border);border-radius:8px;color:var(--muted)}
+
+.kpi-grid{
+  display:grid; gap:14px; margin:8px 0 18px;
+  grid-template-columns: repeat(5,minmax(170px,1fr));
+}
+.kpi{
+  background: linear-gradient(180deg, #ffffff, #fafbff);
+  border:1px solid var(--border);
+  border-radius:16px; padding:14px 16px;
+  box-shadow: 0 6px 16px rgba(15,23,42,0.05);
+}
+.kpi .kpi-label{font-size:.85rem;color:var(--muted);margin-bottom:4px}
+.kpi .kpi-value{font-size:1.7rem;font-weight:800;letter-spacing:-.02em;display:flex;align-items:center;gap:.5rem}
+.kpi .trend{font-size:.8rem;padding:.15rem .45rem;border-radius:999px;border:1px solid var(--border);color:var(--muted)}
+.kpi .trend.up{background:rgba(34,197,94,.08); color:#16a34a; border-color:rgba(34,197,94,.25)}
+.kpi .trend.down{background:rgba(239,68,68,.08); color:#dc2626; border-color:rgba(239,68,68,.25)}
+.kpi--indigo{--accent:var(--indigo)}
+.kpi--green{--accent:var(--green)}
+.kpi--blue{--accent:var(--blue)}
+.kpi--amber{--accent:var(--amber)}
+.kpi--purple{--accent:var(--purple)}
+.kpi::after{
+  content:""; display:block; height:3px; border-radius:2px; margin-top:10px;
+  background: linear-gradient(90deg, var(--accent), transparent);
+  opacity:.8;
+}
+
+.card.pretty{border-radius:16px; border:1px solid var(--border); overflow:hidden}
+.card.pretty .card-head{
+  display:flex; align-items:center; justify-content:space-between;
+  padding:12px 14px; border-bottom:1px solid var(--border);
+  background: linear-gradient(180deg, #fff, var(--surface));
+}
+.card.pretty h2{margin:0}
+
+@media (max-width: 1100px){
+  .kpi-grid{grid-template-columns: repeat(3,minmax(160px,1fr))}
+}
+@media (max-width: 700px){
+  .kpi-grid{grid-template-columns: repeat(2,minmax(150px,1fr))}
+}
+</style>
 {% endblock %}
