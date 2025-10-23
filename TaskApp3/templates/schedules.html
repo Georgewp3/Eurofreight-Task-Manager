@@ -2,71 +2,163 @@
 {% block content %}
 <h1 class="page-title">Task Schedules</h1>
 
-<section class="card">
-  <h2>Create a Schedule</h2>
-  <form method="post" action="{{ url_for('admin_schedules_add') }}" class="grid">
-    <label>
-      <div>User</div>
-      <select name="user_id" required>
-        {% for u in users %}
-        <option value="{{u.id}}">{{u.full_name}}</option>
-        {% endfor %}
-      </select>
-    </label>
+<!-- CREATE -->
+<section class="card pretty">
+  <div class="card-head">
+    <h2>Create a Schedule</h2>
+    <span class="chip">local time</span>
+  </div>
 
-    <label>
-      <div>Project</div>
-      <input name="project" placeholder="e.g. General">
-    </label>
+  <form method="post" action="{{ url_for('admin_schedules_add') }}" class="kform">
+    <div class="row">
+      <label class="field">
+        <span class="label">User</span>
+        <select name="user_id" required>
+          {% for u in users %}
+          <option value="{{ u.id }}">{{ u.full_name }}</option>
+          {% endfor %}
+        </select>
+      </label>
 
-    <label class="col-span-2">
-      <div>Task Title</div>
+      <label class="field">
+        <span class="label">Project</span>
+        <input name="project" placeholder="e.g. General">
+      </label>
+
+      <label class="field">
+        <span class="label">Time (local)</span>
+        <input name="time_local" type="time" value="09:00">
+      </label>
+    </div>
+
+    <label class="field">
+      <span class="label">Task Title</span>
       <input name="title" required placeholder="e.g. Weekly Report">
     </label>
 
-    <div class="col-span-2">
-      <div>Weekdays</div>
-      {% for d in ['MON','TUE','WED','THU','FRI','SAT','SUN'] %}
-      <label style="margin-right:12px;">
-        <input type="checkbox" name="wd_{{d}}" {% if d in ['MON'] %}checked{% endif %}> {{d}}
-      </label>
-      {% endfor %}
+    <div class="field">
+      <span class="label">Weekdays</span>
+      <div class="wd-wrap">
+        {% set wdays = ['MON','TUE','WED','THU','FRI','SAT','SUN'] %}
+        {% for d in wdays %}
+        <label class="wd-pill">
+          <input type="checkbox" name="wd_{{ d }}" {% if d in ['MON'] %}checked{% endif %}>
+          <span>{{ d|lower|capitalize }}</span>
+        </label>
+        {% endfor %}
+      </div>
+      <div class="hint">Tip: you can select multiple days.</div>
     </div>
 
-    <label>
-      <div>Time (local)</div>
-      <input name="time_local" type="time" value="09:00">
-    </label>
-
-    <div class="col-span-2">
+    <div class="actions">
       <button class="primary">Add Schedule</button>
     </div>
   </form>
 </section>
 
-<section class="card">
-  <h2>Existing Schedules</h2>
-  <table class="table">
-    <thead>
-      <tr><th>User</th><th>Project</th><th>Title</th><th>Weekdays</th><th>Time</th><th>Last Run</th><th>Actions</th></tr>
-    </thead>
-    <tbody>
-      {% for s in schedules %}
-      <tr>
-        <td>{{ s.user.full_name }}</td>
-        <td>{{ s.project }}</td>
-        <td>{{ s.title }}</td>
-        <td>{{ s.weekdays }}</td>
-        <td>{{ s.time_local }}</td>
-        <td>{{ s.last_run_date or '-' }}</td>
-        <td>
-          <form method="post" action="{{ url_for('admin_schedules_delete', sid=s.id) }}" onsubmit="return confirm('Delete this schedule?')">
-            <button class="danger">Delete</button>
-          </form>
-        </td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
+<!-- LIST -->
+<section class="card pretty">
+  <div class="card-head">
+    <h2>Existing Schedules</h2>
+    <span class="chip">{{ schedules|length }} total</span>
+  </div>
+
+  <div class="table-wrap">
+    <table class="table nice">
+      <thead>
+        <tr>
+          <th>User</th>
+          <th>Project</th>
+          <th>Title</th>
+          <th>Weekdays</th>
+          <th>Time</th>
+          <th>Last Run</th>
+          <th style="width:1%">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for s in schedules %}
+        <tr>
+          <td><strong>{{ s.user.full_name }}</strong></td>
+          <td><span class="pill soft">{{ s.project or '-' }}</span></td>
+          <td>{{ s.title }}</td>
+          <td>
+            {% for d in (s.weekdays or '').split(',') if d %}
+              <span class="mini-pill">{{ d|lower|capitalize }}</span>
+            {% endfor %}
+          </td>
+          <td><span class="time-pill">{{ s.time_local }}</span></td>
+          <td>
+            {% if s.last_run_date %}
+              <span class="date">{{ s.last_run_date }}</span>
+            {% else %}
+              <span class="muted">—</span>
+            {% endif %}
+          </td>
+          <td>
+            <form method="post" action="{{ url_for('admin_schedules_delete', sid=s.id) }}"
+                  onsubmit="return confirm('Delete this schedule?')">
+              <button class="ghost danger">Delete</button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
 </section>
+
+<!-- Page-local styles (safe to keep here; move to style.css later if you like) -->
+<style>
+:root{
+  --border:#e5e7eb; --muted:#6b7280; --surface:#0f172a08;
+}
+.card.pretty{border-radius:16px;border:1px solid var(--border);overflow:hidden;margin-bottom:18px}
+.card.pretty .card-head{
+  display:flex;justify-content:space-between;align-items:center;
+  padding:14px 16px;border-bottom:1px solid var(--border);
+  background:linear-gradient(180deg,#fff,var(--surface));
+}
+.chip{font-size:.75rem;padding:.25rem .5rem;border:1px dashed var(--border);border-radius:8px;color:var(--muted)}
+
+.kform{display:flex;flex-direction:column;gap:14px;padding:14px 16px}
+.kform .row{display:grid;gap:12px;grid-template-columns:repeat(3,minmax(160px,1fr))}
+.field .label{display:block;font-size:.85rem;color:var(--muted);margin-bottom:6px}
+.field input,.field select{width:100%}
+.hint{font-size:.8rem;color:var(--muted);margin-top:6px}
+.actions{display:flex;justify-content:flex-end;margin-top:4px}
+
+.wd-wrap{display:flex;flex-wrap:wrap;gap:8px}
+.wd-pill{position:relative}
+.wd-pill input{position:absolute;opacity:0;pointer-events:none}
+.wd-pill span{
+  display:inline-block;padding:.45rem .8rem;border:1px solid var(--border);
+  border-radius:999px;background:#fff;user-select:none;cursor:pointer;
+}
+.wd-pill input:checked + span{
+  background:#eef6ff;border-color:#93c5fd;color:#1d4ed8;font-weight:600;
+}
+
+.pill.soft{padding:.25rem .5rem;border:1px solid var(--border);border-radius:999px;background:#fff}
+.mini-pill{
+  display:inline-block;padding:.2rem .45rem;border-radius:999px;
+  background:#f5f7fb;border:1px solid var(--border);font-size:.78rem;margin-right:4px
+}
+.time-pill{padding:.25rem .5rem;border-radius:8px;background:#ecfdf5;border:1px solid #bbf7d0}
+.date{font-variant-numeric:tabular-nums}
+.muted{color:var(--muted)}
+
+.table-wrap{overflow-x:auto}
+.table.nice{width:100%;border-collapse:separate;border-spacing:0}
+.table.nice thead th{
+  text-align:left;font-weight:700;padding:10px 12px;border-bottom:1px solid var(--border);
+  background:#fafbff;position:sticky;top:0;z-index:1
+}
+.table.nice tbody td{padding:12px;border-bottom:1px solid var(--border)}
+.table.nice tbody tr:hover{background:#fafafa}
+
+@media (max-width: 900px){
+  .kform .row{grid-template-columns:1fr}
+}
+</style>
 {% endblock %}
