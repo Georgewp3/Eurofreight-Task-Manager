@@ -17,7 +17,8 @@ from models import db, User, Task, LogEntry, ScheduledTask
 
 load_dotenv()
 
-ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "332133")  # fixed as requested
+ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "332133")  
+GEORGE_PASSWORD = os.getenv("GEORGE_PASSWORD", "040773")
 
 def _resolve_db_uri() -> str:
     db_url = os.getenv("DATABASE_URL")
@@ -67,6 +68,14 @@ def create_app():
           if session.get("is_admin") is True:
                return f(*args, **kwargs)
           return redirect(url_for("admin_login"))
+        return wrapper
+    
+    def george_required(f):
+        @wraps(f)
+        def wrapper(*args, **kwargs):
+            if session.get("is_george") is True:
+                return f(*args, **kwargs)
+            return redirect(url_for("admin_login"))  # send to the same login page
         return wrapper
     
     @app.get("/admin/schedules")
@@ -332,6 +341,19 @@ def create_app():
             return redirect(url_for("admin_panel"))
         flash("Wrong password.", "danger")
         return redirect(url_for("admin_login"))
+    
+    @app.post("/george/login")
+    def george_login_post():
+        if request.form.get("password") == GEORGE_PASSWORD:
+            session["is_george"] = True
+            return redirect(url_for("george_page"))
+        flash("Wrong password.", "danger")
+        return redirect(url_for("admin_login"))
+
+    @app.get("/george")
+    @george_required
+    def george_page():
+        return render_template("george.html")
 
     @app.get("/admin/logout")
     def admin_logout():
