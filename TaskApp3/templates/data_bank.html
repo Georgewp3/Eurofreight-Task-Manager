@@ -1,11 +1,15 @@
 {% extends "base.html" %}
 {% block content %}
+
+<!-- ===================== TASK LOGS ===================== -->
 <h1 class="page-title">Data Bank — Task Logs</h1>
 
 <div class="row">
-  <a class="button" href="{{ url_for('admin_export_csv') }}">Export CSV</a>
-  <form method="post" action="{{ url_for('admin_clear_bank') }}" onsubmit="return confirm('Clear all logs?');">
-    <button class="danger">Clear All</button>
+  <a class="button" href="{{ url_for('admin_export_csv') }}">Export Task Logs CSV</a>
+
+  <form method="post" action="{{ url_for('admin_clear_bank') }}"
+        onsubmit="return confirm('Clear ALL task logs?');">
+    <button class="danger">Clear Task Logs</button>
   </form>
 </div>
 
@@ -42,10 +46,16 @@
 
 <hr style="margin:28px 0; border:none; border-top:1px solid #e5e7eb;">
 
+<!-- ===================== OVERTIMES ===================== -->
 <h1 class="page-title">Overtimes</h1>
 
 <div class="row">
   <a class="button" href="{{ url_for('admin_export_overtimes_csv') }}">Export Overtime CSV</a>
+
+  <form method="post" action="{{ url_for('admin_clear_overtimes') }}"
+        onsubmit="return confirm('Clear ALL overtime submissions?');">
+    <button class="danger">Clear Overtimes</button>
+  </form>
 </div>
 
 <table class="table">
@@ -76,5 +86,52 @@
   {% endif %}
   </tbody>
 </table>
+
+<hr style="margin:28px 0; border:none; border-top:1px solid #e5e7eb;">
+
+<!-- ===================== TOTAL OVERTIMES ===================== -->
+<h1 class="page-title">Total Overtimes</h1>
+
+<div class="row">
+  <a class="button" href="{{ url_for('admin_export_overtime_totals_csv') }}">Export Totals CSV</a>
+
+  <!-- Totals reset by clearing overtime entries -->
+  <form method="post" action="{{ url_for('admin_clear_overtimes') }}"
+        onsubmit="return confirm('Reset totals by clearing ALL overtime submissions?');">
+    <button class="danger">Clear Totals</button>
+  </form>
+</div>
+
+<table class="table">
+  <thead>
+    <tr>
+      <th>User</th>
+      <th>Total Overtime (hours)</th>
+    </tr>
+  </thead>
+  <tbody>
+  {% if overtime_totals and overtime_totals|length > 0 %}
+    {% for t in overtime_totals %}
+      <tr>
+        <td>{{ t.user_name }}</td>
+        <td>{{ "%.1f"|format(t.total) }}</td>
+      </tr>
+    {% endfor %}
+  {% else %}
+      <tr>
+        <td colspan="2" class="muted">No overtime totals yet.</td>
+      </tr>
+  {% endif %}
+  </tbody>
+</table>
+
+<div class="muted" style="margin-top:10px;">
+  Last export:
+  {% if last_export_totals %}
+    <strong>{{ last_export_totals|cy_time }}</strong>
+  {% else %}
+    —
+  {% endif %}
+</div>
 
 {% endblock %}

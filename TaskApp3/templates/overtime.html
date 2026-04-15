@@ -61,7 +61,6 @@
 
     <hr style="margin:16px 0; border:none; border-top:1px solid #e5e7eb;">
 
-    <!-- STEP 3 -->
     <div class="step-head">
       <span class="step-dot">3</span>
       <div>
@@ -76,11 +75,17 @@
         <input type="date" name="overtime_date" required>
       </div>
 
-      <div class="field">
+      
         <label>Duration</label>
-        <input type="text" name="duration" required placeholder="e.g. 2h, 2:30, 150 min">
-      </div>
-    </div>
+        <div class="select-wrap">
+            <select name="duration" required>
+                <option value="">— choose duration —</option>
+                {% for i in range(1, 21) %}
+                {% set val = (i * 0.5) %}
+                <option value="{{ '%.1f'|format(val) }}">{{ '%.1f'|format(val) }}</option>
+                {% endfor %}
+            </select>
+        </div>
 
     <div style="margin-top:16px;">
       <button class="primary large" type="submit">Submit Overtime</button>

@@ -13,7 +13,7 @@ from flask import (
 )
 from dotenv import load_dotenv
 
-from models import db, User, Task, LogEntry, ScheduledTask, OvertimeEntry
+from models import db, User, Task, LogEntry, ScheduledTask, OvertimeEntry, ExportMarker
 
 load_dotenv()
 
@@ -294,6 +294,12 @@ def create_app():
         project_other = (request.form.get("project_other") or "").strip()
         overtime_date_str = (request.form.get("overtime_date") or "").strip()
         duration = (request.form.get("duration") or "").strip()
+        allowed_durations = {f"{x/2:.1f}" for x in range(1, 21)}
+        if duration not in allowed_durations:
+            flash("Invalid duration selected.", "danger")
+            return redirect(url_for("overtime_page"))
+        
+        duration = f"{float(duration):.1f}"
         
         user = User.query.get_or_404(user_id)
         
@@ -337,6 +343,14 @@ def create_app():
         
         flash("Overtime entry submitted.", "success")
         return redirect(url_for("overtime_page"))
+    
+    @app.post("/admin/overtimes/clear")
+    @admin_required
+    def admin_clear_overtimes():
+        count = OvertimeEntry.query.delete()
+        db.session.commit()
+        flash(f"Cleared {count} overtime rows.", "warning")
+        return redirect(url_for("admin_data_bank"))
 
 
 
@@ -492,7 +506,30 @@ def create_app():
     def admin_data_bank():
         logs = LogEntry.query.order_by(LogEntry.timestamp.desc()).all()
         overtimes = OvertimeEntry.query.order_by(OvertimeEntry.timestamp.desc()).all()
-        return render_template("data_bank.html", logs=logs, overtimes=overtimes)
+        
+        totals_map = {}
+        for o in overtimes:
+            try:
+                hrs = float(o.duration)
+            except Exception:
+                hrs = 0.0
+            totals_map[o.user_name] = totals_map.get(o.user_name, 0.0) + hrs
+            
+        overtime_totals = [
+            {"user_name": name, "total": round(total, 1)}
+            for name, total in sorted(totals_map.items(), key=lambda x: x[0].lower())
+        ]
+        
+        marker_totals = ExportMarker.query.get("overtime_totals")
+        last_export_totals = marker_totals.last_export_utc if marker_totals else None
+        
+        return render_template(
+            "data_bank.html",
+            logs=logs,
+            overtimes=overtimes,
+            overtime_totals=overtime_totals,
+            last_export_totals=last_export_totals
+      )
 
     @app.get("/admin/data-bank/export")
     @admin_required
@@ -543,6 +580,38 @@ def create_app():
                 
         return send_file(filepath, as_attachment=True, download_name=filename)
     
+    @app.get("/admin/overtimes/totals/export")
+    @admin_required
+    def admin_export_overtime_totals_csv():
+        filename = f"overtime_totals_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}.csv"
+        filepath = os.path.join(os.path.dirname(__file__), filename)
+        
+        rows = OvertimeEntry.query.all()
+        
+        totals_map = {}
+        for o in rows:
+            try:
+                hrs = float(o.duration)
+            except Exception:
+                hrs = 0.0
+            totals_map[o.user_name] = totals_map.get(o.user_name, 0.0) + hrs
+            
+        with open(filepath, "w", newline="", encoding="utf-8") as f:
+            writer = csv.writer(f)
+            writer.writerow(["User", "Total Overtime (hours)"])
+            for name in sorted(totals_map.keys(), key=lambda x: x.lower()):
+                writer.writerow([name, f"{totals_map[name]:.1f}"])
+                
+        marker = ExportMarker.query.get("overtime_totals")
+        if not marker:
+            marker = ExportMarker(key="overtime_totals")
+            db.session.add(marker)
+        marker.last_export_utc = datetime.utcnow()
+        db.session.commit()
+        
+        return send_file(filepath, as_attachment=True, download_name=filename)
+        
+        
     @app.post("/admin/data-bank/clear")
     @admin_required
     def admin_clear_bank():
