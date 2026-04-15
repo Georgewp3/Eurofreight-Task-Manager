@@ -12,6 +12,7 @@
     <div class="brand">Task Manager</div>
     <nav>
       <a href="{{ url_for('user_page') }}">User</a>
+      <a href="{{ url_for('overtime_page') }}">Overtime</a>
       {% if session.get('is_admin') %}
       <a href="{{ url_for('admin_panel') }}">Admin</a>
       <a href="{{ url_for('admin_data_bank') }}">Data Bank</a>

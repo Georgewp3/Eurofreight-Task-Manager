@@ -13,7 +13,7 @@ from flask import (
 )
 from dotenv import load_dotenv
 
-from models import db, User, Task, LogEntry, ScheduledTask
+from models import db, User, Task, LogEntry, ScheduledTask, OvertimeEntry
 
 load_dotenv()
 
@@ -202,6 +202,11 @@ def create_app():
             "per_user": {"labels": user_labels, "counts": user_counts},
             "per_project": {"labels": proj_labels, "counts": proj_counts},
         })
+        
+    @app.get("/overtime")
+    def overtime_page():
+        users = User.query.filter_by(active=True).order_by(User.full_name.asc()).all()
+        return render_template("overtime.html", users=users)
 
     @app.post("/admin/schedules/add")
     @admin_required
@@ -281,7 +286,57 @@ def create_app():
 
         db.session.commit()
         return {"created": created, "date": str(today), "weekday": wd}, 200
-
+    
+    @app.post("/overtime/submit")
+    def overtime_submit():
+        user_id = int(request.form.get("user_id"))
+        project_choice = (request.form.get("project") or "").strip()
+        project_other = (request.form.get("project_other") or "").strip()
+        overtime_date_str = (request.form.get("overtime_date") or "").strip()
+        duration = (request.form.get("duration") or "").strip()
+        
+        user = User.query.get_or_404(user_id)
+        
+        if project_choice == "other":
+            project_final = project_other
+        else:
+            project_final = project_choice
+            
+        allowed = {"TEMU","ALPHAMEGA","PUBLIC","FROZEN","TRANSPORT","OTHER"}
+        if project_choice not in allowed:
+            flash("Invalid project choice.", "danger")
+            return redirect(url_for("overtime_page"))
+        
+        if project_choice == "OTHER" and not project_other:
+            flash("Please type the project name for OTHER.", "danger")
+            return redirect(url_for("overtime_page"))
+        
+        if not overtime_date_str:
+            flash("Please select an overtime date.", "danger")
+            return redirect(url_for("overtime_page"))
+        
+        if not duration:
+            flash("Please enter the duration.", "danger")
+            return redirect(url_for("overtime_page"))
+        
+        try:
+            overtime_date = datetime.strptime(overtime_date_str, "%Y-%m-%d").date()
+        except Exception:
+            flash("Invalid date.", "danger")
+            return redirect(url_for("overtime_page"))
+        
+        entry = OvertimeEntry(
+            user_name=user.full_name,
+            project=project_final,
+            overtime_date=overtime_date,
+            duration=duration,
+            timestamp=datetime.utcnow(),
+        )
+        db.session.add(entry)
+        db.session.commit()
+        
+        flash("Overtime entry submitted.", "success")
+        return redirect(url_for("overtime_page"))
 
 
 
@@ -436,7 +491,8 @@ def create_app():
     @admin_required
     def admin_data_bank():
         logs = LogEntry.query.order_by(LogEntry.timestamp.desc()).all()
-        return render_template("data_bank.html", logs=logs)
+        overtimes = OvertimeEntry.query.order_by(OvertimeEntry.timestamp.desc()).all()
+        return render_template("data_bank.html", logs=logs, overtimes=overtimes)
 
     @app.get("/admin/data-bank/export")
     @admin_required
@@ -461,6 +517,30 @@ def create_app():
                 ts_local.strftime('%d/%m/%Y - %H:%M:%S'),
                 row.comment or ""
                 ])
+        return send_file(filepath, as_attachment=True, download_name=filename)
+    
+    @app.get("/admin/overtimes/export")
+    @admin_required
+    def admin_export_overtimes_csv():
+        filename = f"overtimes_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}.csv"
+        filepath = os.path.join(os.path.dirname(__file__), filename)
+        
+        rows = OvertimeEntry.query.order_by(OvertimeEntry.timestamp.asc()).all()
+        cy = ZoneInfo("Europe/Nicosia")
+        
+        with open(filepath, "w", newline="", encoding="utf-8") as f:
+            writer = csv.writer(f)
+            writer.writerow(["User", "Project", "Overtime Date", "Duration", "Submitted At"])
+            for r in rows:
+                submitted_local = r.timestamp.replace(tzinfo=timezone.utc).astimezone(cy)
+                writer.writerow([
+                    r.user_name,
+                    r.project,
+                    r.overtime_date.strftime("%d/%m/%Y"),
+                    r.duration,
+                    submitted_local.strftime("%d/%m/%Y - %H:%M:%S"),
+                ])
+                
         return send_file(filepath, as_attachment=True, download_name=filename)
     
     @app.post("/admin/data-bank/clear")

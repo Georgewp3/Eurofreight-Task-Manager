@@ -1,3 +1,5 @@
+from datetime import datetime
+
 # models.py
 from flask_sqlalchemy import SQLAlchemy
 
@@ -72,3 +74,32 @@ class ScheduledTask(db.Model):
     last_run_date = db.Column(db.Date, nullable=True)
 
     active = db.Column(db.Boolean, default=True, nullable=False)
+    
+class OvertimeEntry(db.Model):
+    __tablename__ = "overtime_entries"
+
+    id = db.Column(db.Integer, primary_key=True)
+
+    # store name (like LogEntry does) so history stays correct even if user is removed/renamed
+    user_name = db.Column(db.String(255), nullable=False)
+
+    # final project string (either one of the dropdown values or the custom OTHER text)
+    project = db.Column(db.String(255), nullable=False)
+
+    # date the overtime happened (user picks)
+    overtime_date = db.Column(db.Date, nullable=False)
+
+    # duration as text (flexible, user enters whatever e.g. "3h", "2:30", "150 min")
+    duration = db.Column(db.String(100), nullable=False)
+
+    # when the submission was made (UTC)
+    timestamp = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+
+    def as_csv_row(self):
+        return [
+            self.user_name,
+            self.project,
+            self.overtime_date.isoformat(),
+            self.duration,
+            self.timestamp.isoformat(sep=" "),
+        ]

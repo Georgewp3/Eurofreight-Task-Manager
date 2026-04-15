@@ -39,4 +39,42 @@
   {% endfor %}
   </tbody>
 </table>
+
+<hr style="margin:28px 0; border:none; border-top:1px solid #e5e7eb;">
+
+<h1 class="page-title">Overtimes</h1>
+
+<div class="row">
+  <a class="button" href="{{ url_for('admin_export_overtimes_csv') }}">Export Overtime CSV</a>
+</div>
+
+<table class="table">
+  <thead>
+    <tr>
+      <th>User</th>
+      <th>Project</th>
+      <th>Overtime Date</th>
+      <th>Duration</th>
+      <th>Submitted At</th>
+    </tr>
+  </thead>
+  <tbody>
+  {% if overtimes and overtimes|length > 0 %}
+    {% for o in overtimes %}
+      <tr>
+        <td>{{ o.user_name }}</td>
+        <td>{{ o.project }}</td>
+        <td>{{ o.overtime_date.strftime("%d/%m/%Y") }}</td>
+        <td>{{ o.duration }}</td>
+        <td>{{ o.timestamp|cy_time }}</td>
+      </tr>
+    {% endfor %}
+  {% else %}
+      <tr>
+        <td colspan="5" class="muted">No overtime submissions yet.</td>
+      </tr>
+  {% endif %}
+  </tbody>
+</table>
+
 {% endblock %}

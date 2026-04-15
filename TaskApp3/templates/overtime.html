@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="page-hero">
+  <h1>Overtime</h1>
+  <p class="subtitle">Submit overtime by user, project, date, and duration.</p>
+</div>
+
+<div class="modern-form">
+  <form method="post" action="{{ url_for('overtime_submit') }}" class="step-card">
+    <!-- STEP 1 -->
+    <div class="step-head">
+      <span class="step-dot">1</span>
+      <div>
+        <h3>Select User</h3>
+        <p class="muted">Choose your name</p>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>User</label>
+      <div class="select-wrap">
+        <select name="user_id" required>
+          <option value="">— choose user —</option>
+          {% for u in users %}
+          <option value="{{u.id}}">{{u.full_name}}</option>
+          {% endfor %}
+        </select>
+      </div>
+    </div>
+
+    <hr style="margin:16px 0; border:none; border-top:1px solid #e5e7eb;">
+
+    <!-- STEP 2 -->
+    <div class="step-head">
+      <span class="step-dot">2</span>
+      <div>
+        <h3>Select Project</h3>
+        <p class="muted">Pick one or choose OTHER</p>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Project</label>
+      <div class="select-wrap">
+        <select name="project" id="projectSelect" required>
+          <option value="">— choose project —</option>
+          <option value="TEMU">TEMU</option>
+          <option value="ALPHAMEGA">ALPHAMEGA</option>
+          <option value="PUBLIC">PUBLIC</option>
+          <option value="FROZEN">FROZEN</option>
+          <option value="TRANSPORT">TRANSPORT</option>
+          <option value="OTHER">OTHER</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="field" id="otherProjectWrap" style="display:none;">
+      <label>Project name (OTHER)</label>
+      <input type="text" name="project_other" placeholder="Type project name…">
+    </div>
+
+    <hr style="margin:16px 0; border:none; border-top:1px solid #e5e7eb;">
+
+    <!-- STEP 3 -->
+    <div class="step-head">
+      <span class="step-dot">3</span>
+      <div>
+        <h3>Date and Duration</h3>
+        <p class="muted">Select date and enter total overtime</p>
+      </div>
+    </div>
+
+    <div class="grid two" style="gap:12px;">
+      <div class="field">
+        <label>Overtime date</label>
+        <input type="date" name="overtime_date" required>
+      </div>
+
+      <div class="field">
+        <label>Duration</label>
+        <input type="text" name="duration" required placeholder="e.g. 2h, 2:30, 150 min">
+      </div>
+    </div>
+
+    <div style="margin-top:16px;">
+      <button class="primary large" type="submit">Submit Overtime</button>
+    </div>
+  </form>
+</div>
+
+<script>
+  const projectSelect = document.getElementById("projectSelect");
+  const otherWrap = document.getElementById("otherProjectWrap");
+
+  projectSelect.addEventListener("change", () => {
+    otherWrap.style.display = (projectSelect.value === "OTHER") ? "block" : "none";
+  });
+</script>
+{% endblock %}
