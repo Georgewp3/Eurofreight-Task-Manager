@@ -104,7 +104,7 @@ class OvertimeEntry(db.Model):
             self.timestamp.isoformat(sep=" "),
         ]
         
-    class ExportMarker(db.Model):
-        __tablename__ = "export_markers"
-        key = db.Column(db.String(50), primary_key=True)   # "overtime_totals"
-        last_export_utc = db.Column(db.DateTime, nullable=True)
+class ExportMarker(db.Model):
+    __tablename__ = "export_markers"
+    key = db.Column(db.String(50), primary_key=True)   # "overtime_totals"
+    last_export_utc = db.Column(db.DateTime, nullable=True)
