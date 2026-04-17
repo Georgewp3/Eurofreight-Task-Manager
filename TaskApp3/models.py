@@ -108,3 +108,10 @@ class ExportMarker(db.Model):
     __tablename__ = "export_markers"
     key = db.Column(db.String(50), primary_key=True)   # "overtime_totals"
     last_export_utc = db.Column(db.DateTime, nullable=True)
+    
+class OvertimeTotal(db.Model):
+    __tablename__ = "overtime_totals"
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_name = db.Column(db.String(255), nullable=False, unique=True)
+    total_hours = db.Column(db.Float, nullable=False, default=0.0)

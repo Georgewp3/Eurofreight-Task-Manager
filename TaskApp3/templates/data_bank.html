@@ -66,6 +66,7 @@
       <th>Overtime Date</th>
       <th>Duration</th>
       <th>Submitted At</th>
+      <th style="width:1%">Actions</th>
     </tr>
   </thead>
   <tbody>
@@ -73,15 +74,43 @@
     {% for o in overtimes %}
       <tr>
         <td>{{ o.user_name }}</td>
-        <td>{{ o.project }}</td>
-        <td>{{ o.overtime_date.strftime("%d/%m/%Y") }}</td>
-        <td>{{ o.duration }}</td>
-        <td>{{ o.timestamp|cy_time }}</td>
+
+        <!-- Inline edit form STARTS here (inside the row, not inside <td> nesting incorrectly) -->
+        <form method="post" action="{{ url_for('admin_edit_overtime', oid=o.id) }}">
+          <td>
+            <input type="text" name="project" value="{{ o.project }}" style="min-width:140px;">
+          </td>
+
+          <td>
+            <input type="date" name="overtime_date" value="{{ o.overtime_date.strftime('%Y-%m-%d') }}" style="min-width:140px;">
+          </td>
+
+          <td>
+            <select name="duration" required style="min-width:100px;">
+              {% for i in range(1, 21) %}
+                {% set val = "%.1f"|format(i*0.5) %}
+                <option value="{{ val }}" {% if o.duration == val %}selected{% endif %}>{{ val }}</option>
+              {% endfor %}
+            </select>
+          </td>
+
+          <td>{{ o.timestamp|cy_time }}</td>
+
+          <td style="white-space:nowrap;">
+            <button class="button small" type="submit">Save</button>
+        </form>
+
+            <form method="post" action="{{ url_for('admin_delete_overtime', oid=o.id) }}"
+                  onsubmit="return confirm('Delete this overtime entry?');"
+                  style="display:inline-block; margin-left:6px;">
+              <button class="danger small" type="submit">Delete</button>
+            </form>
+          </td>
       </tr>
     {% endfor %}
   {% else %}
       <tr>
-        <td colspan="5" class="muted">No overtime submissions yet.</td>
+        <td colspan="6" class="muted">No overtime submissions yet.</td>
       </tr>
   {% endif %}
   </tbody>
@@ -95,9 +124,9 @@
 <div class="row">
   <a class="button" href="{{ url_for('admin_export_overtime_totals_csv') }}">Export Totals CSV</a>
 
-  <!-- Totals reset by clearing overtime entries -->
-  <form method="post" action="{{ url_for('admin_clear_overtimes') }}"
-        onsubmit="return confirm('Reset totals by clearing ALL overtime submissions?');">
+  <!-- Clear totals ONLY -->
+  <form method="post" action="{{ url_for('admin_clear_overtime_totals') }}"
+        onsubmit="return confirm('Clear ONLY the totals table (entries remain)?');">
     <button class="danger">Clear Totals</button>
   </form>
 </div>
@@ -114,7 +143,7 @@
     {% for t in overtime_totals %}
       <tr>
         <td>{{ t.user_name }}</td>
-        <td>{{ "%.1f"|format(t.total) }}</td>
+        <td>{{ "%.1f"|format(t.total_hours) }}</td>
       </tr>
     {% endfor %}
   {% else %}

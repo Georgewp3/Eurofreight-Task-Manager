@@ -13,7 +13,7 @@ from flask import (
 )
 from dotenv import load_dotenv
 
-from models import db, User, Task, LogEntry, ScheduledTask, OvertimeEntry, ExportMarker
+from models import db, User, Task, LogEntry, ScheduledTask, OvertimeEntry, ExportMarker, OvertimeTotal
 
 load_dotenv()
 
@@ -303,7 +303,7 @@ def create_app():
         
         user = User.query.get_or_404(user_id)
         
-        if project_choice == "other":
+        if project_choice == "OTHER":
             project_final = project_other
         else:
             project_final = project_choice
@@ -341,6 +341,8 @@ def create_app():
         db.session.add(entry)
         db.session.commit()
         
+        recompute_overtime_totals()
+        
         flash("Overtime entry submitted.", "success")
         return redirect(url_for("overtime_page"))
     
@@ -351,6 +353,73 @@ def create_app():
         db.session.commit()
         flash(f"Cleared {count} overtime rows.", "warning")
         return redirect(url_for("admin_data_bank"))
+    
+    @app.post("/admin/overtimes/delete/<int:oid>")
+    @admin_required
+    def admin_delete_overtime(oid):
+        o = OvertimeEntry.query.get_or_404(oid)
+        db.session.delete(o)
+        db.session.commit()
+        
+        recompute_overtime_totals()
+        
+        flash("Overtime entry deleted.", "success")
+        return redirect(url_for("admin_data_bank"))
+    
+    @app.post("/admin/overtimes/edit/<int:oid>")
+    @admin_required
+    def admin_edit_overtime(oid):
+        o = OvertimeEntry.query.get_or_404(oid)
+        
+        project = (request.form.get("project") or "").strip()
+        overtime_date_str = (request.form.get("overtime_date") or "").strip()
+        duration = (request.form.get("duration") or "").strip()
+        
+        if not project:
+            flash("Project cannot be empty.", "danger")
+            return redirect(url_for("admin_data_bank"))
+        
+        try:
+            overtime_date = datetime.strptime(overtime_date_str, "%Y-%m-%d").date()
+        except Exception:
+            flash("Invalid date format.", "danger")
+            return redirect(url_for("admin_data_bank"))
+        
+        allowed = {f"{x/2:.1f}" for x in range(1, 21)}
+        if duration not in allowed:
+            flash("Invalid duration.", "danger")
+            return redirect(url_for("admin_data_bank"))
+        
+        o.project = project
+        o.overtime_date = overtime_date
+        o.duration = f"{float(duration):.1f}"
+        db.session.commit()
+        
+        recompute_overtime_totals()
+        
+        flash("Overtime entry updated.", "success")
+        return redirect(url_for("admin_data_bank")) 
+    
+    @app.post("/admin/overtimes/totals/clear")
+    @admin_required
+    def admin_clear_overtime_totals():
+        count = OvertimeTotal.query.delete()
+        db.session.commit()
+        flash(f"Cleared {count} overtime total rows.", "warning")
+        return redirect(url_for("admin_data_bank"))
+    
+    def recompute_overtime_totals():
+        
+        OvertimeTotal.query.delete()
+        
+        rows = db.session.query(OvertimeEntry.user_name, func.sum(cast(OvertimeEntry.duration, db.Float))).group_by(OvertimeEntry.user_name).all()
+        
+        for name, total in rows:
+            total_val = float(total or 0.0)
+            db.session.add(OvertimeTotal(user_name=name, total_hours=round(total_val, 1)))
+            
+        db.session.commit()
+
 
 
 
@@ -506,6 +575,8 @@ def create_app():
     def admin_data_bank():
         logs = LogEntry.query.order_by(LogEntry.timestamp.desc()).all()
         overtimes = OvertimeEntry.query.order_by(OvertimeEntry.timestamp.desc()).all()
+        
+        overtime_totals = OvertimeTotal.query.order_by(OvertimeTotal.user_name.asc()).all()
         
         totals_map = {}
         for o in overtimes:
