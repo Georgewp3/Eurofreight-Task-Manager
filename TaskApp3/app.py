@@ -412,11 +412,16 @@ def create_app():
         
         OvertimeTotal.query.delete()
         
-        rows = db.session.query(OvertimeEntry.user_name, func.sum(cast(OvertimeEntry.duration, db.Float))).group_by(OvertimeEntry.user_name).all()
-        
-        for name, total in rows:
-            total_val = float(total or 0.0)
-            db.session.add(OvertimeTotal(user_name=name, total_hours=round(total_val, 1)))
+        totals = {}
+        for o in OvertimeEntry.query.all():
+            try:
+                hrs = float(o.duration)
+            except Exception:
+                hrs = 0.0
+            totals[o.user_name] = totals.get(o.user_name, 0.0) + hrs
+            
+        for name, total in totals.items():
+            db.session.add(OvertimeTotal(user_name=name, total_hours=round(total, 1)))
             
         db.session.commit()
 
@@ -578,21 +583,8 @@ def create_app():
         
         overtime_totals = OvertimeTotal.query.order_by(OvertimeTotal.user_name.asc()).all()
         
-        totals_map = {}
-        for o in overtimes:
-            try:
-                hrs = float(o.duration)
-            except Exception:
-                hrs = 0.0
-            totals_map[o.user_name] = totals_map.get(o.user_name, 0.0) + hrs
-            
-        overtime_totals = [
-            {"user_name": name, "total": round(total, 1)}
-            for name, total in sorted(totals_map.items(), key=lambda x: x[0].lower())
-        ]
-        
-        marker_totals = ExportMarker.query.get("overtime_totals")
-        last_export_totals = marker_totals.last_export_utc if marker_totals else None
+        marker = ExportMarker.query.get("overtime_totals")
+        last_export_totals = marker.last_export_utc if marker else None
         
         return render_template(
             "data_bank.html",
