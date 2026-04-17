@@ -3,7 +3,7 @@ Task Management System
 A small Flask application for assigning tasks to users, collecting daily status updates, scheduling recurring tasks, and exporting an audit trail. Timestamps are stored in UTC and displayed in Europe/Nicosia.
 Available at: https://test-3-1-rosb.onrender.com/
 
-All the functions are available through the password-protected Admin tab. To view the whole app the password is " 332133 ".
+All the functions are available through the password-protected Admin tab. To view the whole app contact me: giorgospapageorgiou043@gmail.com
 
 Tech stack
 
