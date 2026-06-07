@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 452 186" role="img" aria-labelledby="title desc">
+  <title id="title">IKEA</title>
+  <desc id="desc">IKEA logo with yellow oval and blue lettering.</desc>
+  <rect width="452" height="186" fill="#0058a3"/>
+  <ellipse cx="226" cy="93" rx="216" ry="82" fill="#ffdb00"/>
+  <text x="226" y="121" fill="#0058a3" font-family="Arial Black, Arial, Helvetica, sans-serif" font-size="92" font-weight="900" letter-spacing="4" text-anchor="middle">IKEA</text>
+  <text x="399" y="70" fill="#0058a3" font-family="Arial, Helvetica, sans-serif" font-size="24" font-weight="700">R</text>
+</svg>

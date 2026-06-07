@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 490 135" role="img" aria-labelledby="title desc">
+  <title id="title">Eurofreight</title>
+  <desc id="desc">Eurofreight logo with red mark and logistics tagline.</desc>
+  <rect width="490" height="135" fill="#f8fafc"/>
+  <g fill="none" stroke="#e11d2e" stroke-width="7" stroke-linecap="square">
+    <path d="M16 12 L82 78"/>
+    <path d="M16 38 L62 84"/>
+    <path d="M40 86 L92 34"/>
+    <path d="M26 94 L102 18"/>
+  </g>
+  <text x="120" y="89" fill="#24306f" font-family="Arial, Helvetica, sans-serif" font-size="57" font-weight="700">Eurofreight</text>
+  <text x="15" y="126" fill="#24306f" font-family="Arial, Helvetica, sans-serif" font-size="26">Leading the way in </text>
+  <text x="260" y="126" fill="#e11d2e" font-family="Arial, Helvetica, sans-serif" font-size="26">Logistics</text>
+</svg>

@@ -7,8 +7,12 @@
     <p class="choice-subtitle">Please choose your company to continue.</p>
 
     <div class="choice-actions">
-      <a class="choice-btn" href="{{ url_for('user_page') }}">EUROFREIGHT</a>
-      <a class="choice-btn secondary" href="{{ url_for('ikea_page') }}">IKEA</a>
+      <a class="choice-btn logo-btn" href="{{ url_for('user_page') }}" aria-label="EUROFREIGHT">
+        <img src="{{ url_for('static', filename='eurofreight-logo.svg') }}" alt="EUROFREIGHT">
+      </a>
+      <a class="choice-btn logo-btn secondary" href="{{ url_for('ikea_page') }}" aria-label="IKEA">
+        <img src="{{ url_for('static', filename='ikea-logo.svg') }}" alt="IKEA">
+      </a>
     </div>
   </div>
 </section>

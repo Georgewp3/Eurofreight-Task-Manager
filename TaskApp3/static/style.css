@@ -121,6 +121,22 @@ button.small,.button.small{padding:6px 10px;font-size:.9rem}
   color:#111827;
   box-shadow:none;
 }
+.choice-btn.logo-btn{
+  min-height:126px;
+  padding:14px;
+  background:#fff;
+  border:1px solid #dbe2ea;
+}
+.choice-btn.logo-btn img{
+  display:block;
+  width:100%;
+  max-height:96px;
+  object-fit:contain;
+}
+.choice-btn.logo-btn.secondary{
+  background:#0058a3;
+  border-color:#0058a3;
+}
 .placeholder-card .button{
   margin-top:22px;
 }
