@@ -21,7 +21,7 @@
         <select id="userSelect">
           <option value="">— choose user —</option>
           {% for u in users %}
-          <option value="{{u.id}}">{{u.full_name}}</option>
+          <option value="{{u.id}}" {% if current_user_id and u.id == current_user_id %}selected{% endif %}>{{u.full_name}}</option>
           {% endfor %}
         </select>
       </div>

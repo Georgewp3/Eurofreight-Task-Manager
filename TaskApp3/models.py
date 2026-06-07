@@ -12,6 +12,7 @@ class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     full_name = db.Column(db.String(200), unique=True, nullable=False)
     active = db.Column(db.Boolean, default=True, nullable=False)
+    login_password_hash = db.Column(db.String(255), nullable=True)
 
     # backref "user" on Task
     tasks = db.relationship("Task", backref="user", cascade="all, delete-orphan")

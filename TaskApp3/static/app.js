@@ -102,3 +102,10 @@ async function loadTasksFor(userId) {
   if (emptyTasks)
     emptyTasks.style.display = tasks.length === 0 ? "block" : "none";
 }
+
+if (userSelect && userSelect.value) {
+  loadTasksFor(userSelect.value).then(() => {
+    if (statusSelect) statusSelect.disabled = false;
+    updateSubmitState();
+  });
+}

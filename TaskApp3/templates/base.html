@@ -12,16 +12,21 @@
   <header class="topbar">
     <a class="brand" href="{{ url_for('choice_page') }}">Task Manager</a>
     <nav>
+      {% if session.get('eurofreight_user_id') %}
       <a href="{{ url_for('user_page') }}">User</a>
       <a href="{{ url_for('overtime_page') }}">Overtime</a>
+      {% endif %}
       {% if session.get('is_admin') %}
       <a href="{{ url_for('admin_panel') }}">Admin</a>
       <a href="{{ url_for('admin_data_bank') }}">Data Bank</a>
-      <a href="{{ url_for('admin_logout') }}">Logout</a>
+      <a href="{{ url_for('admin_logout') }}">Admin Logout</a>
       {% else %}
       <a href="{{ url_for('admin_login') }}">Admin Login</a>
       {% endif %}
-      <a href="{{ url_for('choice_page') }}">Switch Company</a>
+      {% if session.get('eurofreight_user_id') %}
+      <a href="{{ url_for('eurofreight_logout') }}">Switch User</a>
+      {% endif %}
+      <a href="{{ url_for('choice_page') }}">Company Selection</a>
     </nav>
   </header>
   {% endif %}

@@ -1,9 +1,10 @@
 import csv
 import os
+import secrets
 from datetime import datetime, timezone, timedelta
 from functools import wraps
 from zoneinfo import ZoneInfo
-from sqlalchemy import func, cast, Date
+from sqlalchemy import func, cast, Date, inspect, text
 from sqlalchemy.exc import SQLAlchemyError
 from pathlib import Path
 
@@ -12,6 +13,7 @@ from flask import (
     jsonify, session, send_file, flash
 )
 from dotenv import load_dotenv
+from werkzeug.security import check_password_hash, generate_password_hash
 
 from models import db, User, Task, LogEntry, ScheduledTask, OvertimeEntry, ExportMarker, OvertimeTotal
 
@@ -19,6 +21,35 @@ load_dotenv()
 
 ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "332133")  
 GEORGE_PASSWORD = os.getenv("GEORGE_PASSWORD", "040773")
+
+INITIAL_EUROFREIGHT_USER_PASSWORDS = {
+    "Bodylawson": "159638",
+    "Elena Toumazou": "904271",
+    "Elena Yiallourou": "625083",
+    "George Papageorgiou": "333333",
+    "GOURAV": "870492",
+    "Julie Ntokou": "222000",
+    "Lih Rostent": "568748",
+    "LOVEPREET SINGH": "967125",
+    "Marina Aspromalli": "359745",
+    "Mbu Christopher Bate": "865214",
+    "Merlin Basseck Noah": "987452",
+    "Narender Singh (in pop with Marina)": "201069",
+    "NAVIN KUMAR": "310465",
+    "Pailak Tatarian": "846795",
+    "RAJINDER KUMAR SABI": "369269",
+    "Ramandeep Singh (Raman)": "746032",
+    "Ravinderjit Singh (Jot)": "850536",
+    "SAMSHER SINGH": "980302",
+    "Sandeep Singh (in cargo with Picka)": "125215",
+    "Tzeni Dima": "200300",
+    "Valentinos Meliniotis": "100200",
+    "Vassilis Papageorgiou": "332133",
+}
+
+
+def generate_6_digit_password() -> str:
+    return f"{secrets.randbelow(1_000_000):06d}"
 
 def _resolve_db_uri() -> str:
     db_url = os.getenv("DATABASE_URL")
@@ -35,6 +66,36 @@ def _resolve_db_uri() -> str:
     
     sqlite_path = Path(__file__).with_name("task_db.sqlite3")
     return f"sqlite:///{sqlite_path.as_posix()}"
+
+
+def ensure_user_password_column():
+    inspector = inspect(db.engine)
+    if not inspector.has_table("users"):
+        return
+
+    columns = {col["name"] for col in inspector.get_columns("users")}
+    if "login_password_hash" in columns:
+        return
+
+    db.session.execute(text("ALTER TABLE users ADD COLUMN login_password_hash VARCHAR(255)"))
+    db.session.commit()
+
+
+def sync_initial_eurofreight_passwords():
+    for full_name, password in INITIAL_EUROFREIGHT_USER_PASSWORDS.items():
+        user = User.query.filter_by(full_name=full_name).first()
+        if not user:
+            db.session.add(User(
+                full_name=full_name,
+                login_password_hash=generate_password_hash(password),
+            ))
+        elif not user.login_password_hash:
+            user.login_password_hash = generate_password_hash(password)
+
+    demo = User.query.filter_by(full_name="Demo User").first()
+    if demo:
+        demo.active = False
+    db.session.commit()
 
 
 
@@ -54,12 +115,9 @@ def create_app():
     app.jinja_env.filters["cy_time"] = cy_time
 
     with app.app_context():
+        ensure_user_password_column()
         db.create_all()
-        if not User.query.first():
-            demo = User(full_name="Demo User")
-            db.session.add(demo)
-            db.session.add(Task(user=demo, project="General", title="Read onboarding doc"))
-            db.session.commit()
+        sync_initial_eurofreight_passwords()
 
     # ---------- Helpers ----------
     def admin_required(f):
@@ -76,6 +134,14 @@ def create_app():
             if session.get("is_george") is True:
                 return f(*args, **kwargs)
             return redirect(url_for("admin_login"))  # send to the same login page
+        return wrapper
+
+    def eurofreight_required(f):
+        @wraps(f)
+        def wrapper(*args, **kwargs):
+            if session.get("eurofreight_user_id"):
+                return f(*args, **kwargs)
+            return redirect(url_for("eurofreight_login"))
         return wrapper
     
     @app.get("/admin/schedules")
@@ -204,6 +270,7 @@ def create_app():
         })
         
     @app.get("/overtime")
+    @eurofreight_required
     def overtime_page():
         users = User.query.filter_by(active=True).order_by(User.full_name.asc()).all()
         return render_template("overtime.html", users=users)
@@ -288,6 +355,7 @@ def create_app():
         return {"created": created, "date": str(today), "weekday": wd}, 200
     
     @app.post("/overtime/submit")
+    @eurofreight_required
     def overtime_submit():
         user_id = int(request.form.get("user_id"))
         project_choice = (request.form.get("project") or "").strip()
@@ -434,15 +502,67 @@ def create_app():
         return render_template("choice.html", hide_nav=True)
 
     @app.get("/eurofreight")
+    @eurofreight_required
     def user_page():
         users = User.query.filter_by(active=True).order_by(User.full_name.asc()).all()
-        return render_template("user.html", users=users)
+        return render_template(
+            "user.html",
+            users=users,
+            current_user_id=session.get("eurofreight_user_id"),
+        )
+
+    @app.get("/eurofreight/login")
+    def eurofreight_login():
+        if session.get("eurofreight_user_id"):
+            return redirect(url_for("user_page"))
+        users = User.query.filter_by(active=True).order_by(User.full_name.asc()).all()
+        return render_template("eurofreight_login.html", users=users, hide_nav=True)
+
+    @app.post("/eurofreight/login")
+    def eurofreight_login_post():
+        user_id = request.form.get("user_id")
+        password = request.form.get("password") or ""
+
+        if not user_id:
+            flash("Please select your name.", "danger")
+            return redirect(url_for("eurofreight_login"))
+
+        if not password:
+            flash("Please enter your password.", "danger")
+            return redirect(url_for("eurofreight_login"))
+
+        user = User.query.get(user_id)
+        if not user or not user.active:
+            flash("Selected user is not available.", "danger")
+            return redirect(url_for("eurofreight_login"))
+
+        user_password_ok = bool(
+            user.login_password_hash and check_password_hash(user.login_password_hash, password)
+        )
+        admin_override_ok = password == ADMIN_PASSWORD
+
+        if not user_password_ok and not admin_override_ok:
+            flash("Incorrect password.", "danger")
+            return redirect(url_for("eurofreight_login"))
+
+        session["eurofreight_user_id"] = user.id
+        session["eurofreight_user_name"] = user.full_name
+        flash(f"Welcome, {user.full_name}.", "success")
+        return redirect(url_for("user_page"))
+
+    @app.get("/eurofreight/logout")
+    def eurofreight_logout():
+        session.pop("eurofreight_user_id", None)
+        session.pop("eurofreight_user_name", None)
+        flash("Eurofreight user logged out.", "success")
+        return redirect(url_for("eurofreight_login"))
 
     @app.get("/ikea")
     def ikea_page():
         return render_template("ikea.html", hide_nav=True)
 
     @app.post("/submit")
+    @eurofreight_required
     def submit_entry():
         data = request.form
         user_id = int(data.get("user_id"))
@@ -468,11 +588,13 @@ def create_app():
 
     # --- APIs for dynamic UI ---
     @app.get("/api/users")
+    @eurofreight_required
     def api_users():
         users = User.query.filter_by(active=True).order_by(User.full_name.asc()).all()
         return jsonify([{"id": u.id, "name": u.full_name} for u in users])
 
     @app.get("/api/user/<int:user_id>/tasks")
+    @eurofreight_required
     def api_user_tasks(user_id: int):
         tasks = Task.query.filter_by(user_id=user_id).order_by(Task.created_at.desc()).all()
         return jsonify([
@@ -483,7 +605,11 @@ def create_app():
     # ---------- Admin ----------
     @app.get("/admin/login")
     def admin_login():
-        return render_template("admin.html", stage="login")
+        return render_template(
+            "admin.html",
+            stage="login",
+            hide_nav=not bool(session.get("eurofreight_user_id")),
+        )
 
     @app.post("/admin/login")
     def admin_login_post():
@@ -509,7 +635,7 @@ def create_app():
     @app.get("/admin/logout")
     def admin_logout():
         session.clear()
-        return redirect(url_for("user_page"))
+        return redirect(url_for("eurofreight_login"))
 
     @app.get("/admin")
     @admin_required
@@ -545,9 +671,26 @@ def create_app():
         elif User.query.filter_by(full_name=name).first():
             flash("User already exists.", "warning")
         else:
-            db.session.add(User(full_name=name))
+            password = generate_6_digit_password()
+            db.session.add(User(
+                full_name=name,
+                login_password_hash=generate_password_hash(password),
+            ))
             db.session.commit()
-            flash("User added.", "success")
+            flash(f"User added. Temporary password: {password}", "success")
+        return redirect(url_for("admin_panel"))
+
+    @app.post("/admin/reset-user-password/<int:user_id>")
+    @admin_required
+    def admin_reset_user_password(user_id):
+        user = User.query.get_or_404(user_id)
+        password = generate_6_digit_password()
+        user.login_password_hash = generate_password_hash(password)
+        db.session.commit()
+        flash(
+            f"Password reset for {user.full_name}. New temporary password: {password}",
+            "success",
+        )
         return redirect(url_for("admin_panel"))
 
     @app.post("/admin/remove-user/<int:user_id>")

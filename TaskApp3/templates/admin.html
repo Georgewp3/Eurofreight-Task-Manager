@@ -73,9 +73,15 @@
       <div class="assign-row" data-user="{{ u.name|lower }}">
         <div class="assign-head">
           <div><strong>{{ u.name }}</strong> ({{ 'active' if u.active else 'inactive' }})</div>
-          <form method="post" action="{{ url_for('admin_remove_user', user_id=u.id) }}" onsubmit="return confirm('Delete user and all tasks?');">
-            <button class="danger small">Remove User</button>
-          </form>
+          <div class="row">
+            <form method="post" action="{{ url_for('admin_reset_user_password', user_id=u.id) }}"
+                  onsubmit="return confirm('Reset password for this user?');">
+              <button class="ghost small">Reset Password</button>
+            </form>
+            <form method="post" action="{{ url_for('admin_remove_user', user_id=u.id) }}" onsubmit="return confirm('Delete user and all tasks?');">
+              <button class="danger small">Remove User</button>
+            </form>
+          </div>
         </div>
 
         <form class="assign-form" method="post" action="{{ url_for('admin_add_task', user_id=u.id) }}">

@@ -140,6 +140,31 @@ button.small,.button.small{padding:6px 10px;font-size:.9rem}
 .placeholder-card .button{
   margin-top:22px;
 }
+.login-card{
+  text-align:left;
+}
+.login-card h1,
+.login-card .choice-eyebrow,
+.login-card .choice-subtitle{
+  text-align:center;
+}
+.login-form{
+  display:flex;
+  flex-direction:column;
+  gap:16px;
+  margin-top:26px;
+}
+.login-actions{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:12px;
+  flex-wrap:wrap;
+}
+.button.ghost-link{
+  background:#e5e7eb;
+  color:#111827;
+}
 @media (max-width:640px){
   .choice-card,
   .placeholder-card{
