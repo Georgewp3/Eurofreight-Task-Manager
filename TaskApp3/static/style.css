@@ -13,7 +13,7 @@
 *{box-sizing:border-box}
 body{margin:0;font-family:Inter,Segoe UI,system-ui,Arial,sans-serif;background:#e5e7eb;color:#0b1220}
 .topbar{display:flex;justify-content:space-between;align-items:center;padding:12px 18px;background:var(--bg);color:#fff;position:sticky;top:0;z-index:10}
-.topbar .brand{font-weight:700}
+.topbar .brand{font-weight:700;color:#fff;text-decoration:none}
 .topbar a{color:#cbd5e1;text-decoration:none;margin-left:14px}
 .topbar a:hover{color:#fff}
 .container{max-width:1100px;margin:24px auto;padding:0 14px}
@@ -57,6 +57,82 @@ button.small,.button.small{padding:6px 10px;font-size:.9rem}
 .flash.warning{background:#fffbeb;color:#92400e}
 .flash.danger{background:#fef2f2;color:#991b1b}
 .footer{text-align:center;color:#94a3b8;margin:24px 0}
+
+/* --- Company choice and placeholder pages --- */
+.choice-wrap{
+  min-height:calc(100vh - 96px);
+  display:grid;
+  place-items:center;
+  padding:28px 14px;
+}
+.choice-card,
+.placeholder-card{
+  width:min(680px,100%);
+  background:#fff;
+  border:1px solid #e6e8ee;
+  border-radius:16px;
+  padding:34px;
+  text-align:center;
+  box-shadow:0 16px 45px rgba(2,8,23,.10);
+}
+.choice-eyebrow{
+  margin:0 0 8px;
+  color:#64748b;
+  font-weight:700;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+  font-size:.78rem;
+}
+.choice-card h1,
+.placeholder-card h1{
+  margin:0;
+  font-size:2rem;
+}
+.choice-subtitle{
+  margin:10px auto 0;
+  color:#64748b;
+  max-width:440px;
+}
+.choice-actions{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:14px;
+  margin-top:28px;
+}
+.choice-btn{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  min-height:74px;
+  padding:18px;
+  border-radius:14px;
+  background:#0f172a;
+  color:#fff;
+  text-decoration:none;
+  font-weight:800;
+  letter-spacing:.04em;
+  box-shadow:0 10px 26px rgba(15,23,42,.18);
+}
+.choice-btn:hover{
+  transform:translateY(-1px);
+}
+.choice-btn.secondary{
+  background:#e5e7eb;
+  color:#111827;
+  box-shadow:none;
+}
+.placeholder-card .button{
+  margin-top:22px;
+}
+@media (max-width:640px){
+  .choice-card,
+  .placeholder-card{
+    padding:24px;
+  }
+  .choice-actions{
+    grid-template-columns:1fr;
+  }
+}
 
 /* --- Modern User page styling --- */
 .page-hero{

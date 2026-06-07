@@ -430,9 +430,17 @@ def create_app():
 
     # ---------- Views ----------
     @app.get("/")
+    def choice_page():
+        return render_template("choice.html", hide_nav=True)
+
+    @app.get("/eurofreight")
     def user_page():
         users = User.query.filter_by(active=True).order_by(User.full_name.asc()).all()
         return render_template("user.html", users=users)
+
+    @app.get("/ikea")
+    def ikea_page():
+        return render_template("ikea.html", hide_nav=True)
 
     @app.post("/submit")
     def submit_entry():

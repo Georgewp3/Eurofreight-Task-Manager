@@ -8,8 +8,9 @@
   <script defer src="{{ url_for('static', filename='app.js') }}"></script>
 </head>
 <body>
+  {% if not hide_nav %}
   <header class="topbar">
-    <div class="brand">Task Manager</div>
+    <a class="brand" href="{{ url_for('choice_page') }}">Task Manager</a>
     <nav>
       <a href="{{ url_for('user_page') }}">User</a>
       <a href="{{ url_for('overtime_page') }}">Overtime</a>
@@ -20,8 +21,10 @@
       {% else %}
       <a href="{{ url_for('admin_login') }}">Admin Login</a>
       {% endif %}
+      <a href="{{ url_for('choice_page') }}">Switch Company</a>
     </nav>
   </header>
+  {% endif %}
 
   {% with messages = get_flashed_messages(with_categories=true) %}
   {% if messages %}
