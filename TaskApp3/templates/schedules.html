@@ -111,7 +111,7 @@
 <!-- Page-local styles (safe to keep here; move to style.css later if you like) -->
 <style>
 :root{
-  --border:#e5e7eb; --muted:#6b7280; --surface:#0f172a08;
+  --border:var(--ef-border); --muted:var(--ef-muted); --surface:var(--ef-soft-blue);
 }
 .card.pretty{border-radius:16px;border:1px solid var(--border);overflow:hidden;margin-bottom:18px}
 .card.pretty .card-head{
@@ -136,15 +136,15 @@
   border-radius:999px;background:#fff;user-select:none;cursor:pointer;
 }
 .wd-pill input:checked + span{
-  background:#eef6ff;border-color:#93c5fd;color:#1d4ed8;font-weight:600;
+  background:var(--ef-soft-red);border-color:var(--ef-red);color:var(--ef-red-dark);font-weight:600;
 }
 
 .pill.soft{padding:.25rem .5rem;border:1px solid var(--border);border-radius:999px;background:#fff}
 .mini-pill{
   display:inline-block;padding:.2rem .45rem;border-radius:999px;
-  background:#f5f7fb;border:1px solid var(--border);font-size:.78rem;margin-right:4px
+  background:var(--ef-soft-blue);border:1px solid var(--border);font-size:.78rem;margin-right:4px
 }
-.time-pill{padding:.25rem .5rem;border-radius:8px;background:#ecfdf5;border:1px solid #bbf7d0}
+.time-pill{padding:.25rem .5rem;border-radius:8px;background:var(--ef-soft-blue);border:1px solid var(--ef-border);color:var(--ef-navy)}
 .date{font-variant-numeric:tabular-nums}
 .muted{color:var(--muted)}
 
@@ -152,10 +152,10 @@
 .table.nice{width:100%;border-collapse:separate;border-spacing:0}
 .table.nice thead th{
   text-align:left;font-weight:700;padding:10px 12px;border-bottom:1px solid var(--border);
-  background:#fafbff;position:sticky;top:0;z-index:1
+  background:var(--ef-soft-blue);color:var(--ef-navy);position:sticky;top:0;z-index:1
 }
 .table.nice tbody td{padding:12px;border-bottom:1px solid var(--border)}
-.table.nice tbody tr:hover{background:#fafafa}
+.table.nice tbody tr:hover{background:var(--ef-bg)}
 
 @media (max-width: 900px){
   .kform .row{grid-template-columns:1fr}

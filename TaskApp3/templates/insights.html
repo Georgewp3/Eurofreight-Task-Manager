@@ -101,8 +101,9 @@
 
     // ----- Chart.js defaults to match your UI -----
     Chart.defaults.font.family = "Inter, system-ui, Segoe UI, Roboto, Helvetica, Arial, sans-serif";
-    Chart.defaults.color = getComputedStyle(document.documentElement).getPropertyValue("--muted") || "#6b7280";
-    const gridColor = "rgba(148,163,184,.25)";
+    const rootStyle = getComputedStyle(document.documentElement);
+    Chart.defaults.color = rootStyle.getPropertyValue("--ef-muted") || "#5B6B84";
+    const gridColor = "rgba(36,62,143,.18)";
 
     // Helper to build a gradient fill
     const makeLineGradient = (ctx, topHex, bottomTransparentRGBA) => {
@@ -114,7 +115,7 @@
 
     // DAILY LINE
     const dailyCtx = document.getElementById("dailyChart").getContext("2d");
-    const dailyGradient = makeLineGradient(dailyCtx, "#6366F1", "rgba(99,102,241,0.05)");
+    const dailyGradient = makeLineGradient(dailyCtx, "#243E8F", "rgba(36,62,143,0.05)");
 
     new Chart(dailyCtx, {
       type: "line",
@@ -123,7 +124,7 @@
         datasets: [{
           label: "Submissions",
           data: data.daily.counts,
-          borderColor: "#6366F1",
+          borderColor: "#243E8F",
           backgroundColor: dailyGradient,
           tension: .35,
           borderWidth: 2.5,
@@ -143,7 +144,7 @@
     });
 
     // BAR COLORS
-    const palette = ["#22C55E","#3B82F6","#A78BFA","#F59E0B","#EF4444","#06B6D4","#84CC16","#F97316","#E879F9","#0EA5E9"];
+    const palette = ["#14245A","#243E8F","#E31E24","#B9151A","#5B6B84","#16A34A","#F59E0B","#DC2626","#64748B","#071326"];
 
     // USERS (HORIZONTAL BAR)
     const userCtx = document.getElementById("userChart").getContext("2d");
@@ -203,9 +204,9 @@
 <!-- Page-local styles (kept here so you don't need to touch style.css) -->
 <style>
 :root{
-  --indigo: #6366F1; --green:#22C55E; --blue:#3B82F6; --amber:#F59E0B; --purple:#A78BFA;
-  --surface:#0f172a08; --surface-strong:#0f172a0f;
-  --border:#e5e7eb; --muted:#6b7280;
+  --indigo: var(--ef-navy); --green:var(--ef-success); --blue:var(--ef-blue); --amber:var(--ef-warning); --purple:var(--ef-red);
+  --surface:var(--ef-soft-blue); --surface-strong:var(--ef-soft-blue);
+  --border:var(--ef-border); --muted:var(--ef-muted);
 }
 .flex-between{display:flex;justify-content:space-between;align-items:center;gap:.75rem;}
 .pill{padding:.35rem .6rem;border-radius:999px;font-size:.8rem;border:1px solid var(--border)}
@@ -217,16 +218,16 @@
   grid-template-columns: repeat(5,minmax(170px,1fr));
 }
 .kpi{
-  background: linear-gradient(180deg, #ffffff, #fafbff);
+  background: linear-gradient(180deg, #ffffff, var(--ef-bg));
   border:1px solid var(--border);
   border-radius:16px; padding:14px 16px;
-  box-shadow: 0 6px 16px rgba(15,23,42,0.05);
+  box-shadow: 0 6px 16px rgba(20,36,90,0.07);
 }
 .kpi .kpi-label{font-size:.85rem;color:var(--muted);margin-bottom:4px}
 .kpi .kpi-value{font-size:1.7rem;font-weight:800;letter-spacing:-.02em;display:flex;align-items:center;gap:.5rem}
 .kpi .trend{font-size:.8rem;padding:.15rem .45rem;border-radius:999px;border:1px solid var(--border);color:var(--muted)}
-.kpi .trend.up{background:rgba(34,197,94,.08); color:#16a34a; border-color:rgba(34,197,94,.25)}
-.kpi .trend.down{background:rgba(239,68,68,.08); color:#dc2626; border-color:rgba(239,68,68,.25)}
+.kpi .trend.up{background:#E8F7EE; color:#166534; border-color:#BFE8CD}
+.kpi .trend.down{background:var(--ef-soft-red); color:var(--ef-red-dark); border-color:#F6B8BB}
 .kpi--indigo{--accent:var(--indigo)}
 .kpi--green{--accent:var(--green)}
 .kpi--blue{--accent:var(--blue)}
