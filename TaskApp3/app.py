@@ -16,6 +16,18 @@ from dotenv import load_dotenv
 from werkzeug.security import check_password_hash, generate_password_hash
 
 from models import db, User, Task, LogEntry, ScheduledTask, OvertimeEntry, ExportMarker, OvertimeTotal
+from clock_helpers import (
+    DEFAULT_CLOCK_END,
+    DEFAULT_CLOCK_START,
+    calculate_clock_summary,
+    contract_model_overview,
+    format_minutes,
+    get_active_assignment,
+    import_clock_workbook,
+    instruction_scope_label,
+    seed_contract_models,
+)
+from models import ContractModel, UserContractAssignment, ClockExtraInstruction
 
 load_dotenv()
 
@@ -81,6 +93,19 @@ def ensure_user_password_column():
     db.session.commit()
 
 
+def ensure_clock_instruction_user_ids_column():
+    inspector = inspect(db.engine)
+    if not inspector.has_table("clock_extra_instructions"):
+        return
+
+    columns = {col["name"] for col in inspector.get_columns("clock_extra_instructions")}
+    if "user_ids" in columns:
+        return
+
+    db.session.execute(text("ALTER TABLE clock_extra_instructions ADD COLUMN user_ids TEXT"))
+    db.session.commit()
+
+
 def sync_initial_eurofreight_passwords():
     for full_name, password in INITIAL_EUROFREIGHT_USER_PASSWORDS.items():
         user = User.query.filter_by(full_name=full_name).first()
@@ -113,11 +138,15 @@ def create_app():
         cy = ZoneInfo("Europe/Nicosia")
         return dt.replace(tzinfo=timezone.utc).astimezone(cy).strftime("%d/%m/%Y - %H:%M:%S")
     app.jinja_env.filters["cy_time"] = cy_time
+    app.jinja_env.filters["minutes"] = format_minutes
+    app.jinja_env.filters["instruction_scope"] = instruction_scope_label
 
     with app.app_context():
         ensure_user_password_column()
         db.create_all()
+        ensure_clock_instruction_user_ids_column()
         sync_initial_eurofreight_passwords()
+        seed_contract_models()
 
     # ---------- Helpers ----------
     def admin_required(f):
@@ -143,6 +172,211 @@ def create_app():
                 return f(*args, **kwargs)
             return redirect(url_for("eurofreight_login"))
         return wrapper
+
+    @app.get("/admin/clock")
+    @admin_required
+    def admin_clock():
+        selected_user_id = request.args.get("user_id", type=int)
+        selected_user = None
+        result = None
+        assignment = None
+        contract_models = contract_model_overview()
+        users = User.query.filter_by(active=True).order_by(User.full_name.asc()).all()
+        active_instructions = (
+            ClockExtraInstruction.query
+            .filter_by(active=True)
+            .order_by(ClockExtraInstruction.work_date.desc(), ClockExtraInstruction.id.desc())
+            .all()
+        )
+
+        if selected_user_id:
+            selected_user = User.query.filter_by(id=selected_user_id, active=True).first()
+            if selected_user:
+                assignment = get_active_assignment(selected_user.id, DEFAULT_CLOCK_START)
+                result = calculate_clock_summary(
+                    selected_user.id,
+                    DEFAULT_CLOCK_START,
+                    DEFAULT_CLOCK_END,
+                )
+
+        return render_template(
+            "clock.html",
+            selected_user_id=selected_user_id,
+            selected_user=selected_user,
+            start_date=DEFAULT_CLOCK_START,
+            end_date=DEFAULT_CLOCK_END,
+            result=result,
+            current_assignment=assignment,
+            contract_models=contract_models,
+            users=users,
+            active_instructions=active_instructions,
+        )
+
+    @app.post("/admin/clock/instruction/add")
+    @admin_required
+    def admin_clock_instruction_add():
+        title = (request.form.get("title") or "").strip()
+        description = (request.form.get("description") or "").strip()
+        work_date_raw = (request.form.get("work_date") or "").strip()
+        scope_type = (request.form.get("scope_type") or "").strip()
+        contract_model_id = request.form.get("contract_model_id", type=int)
+        user_id = request.form.get("user_id", type=int)
+        user_ids = [int(uid) for uid in request.form.getlist("user_ids") if uid.isdigit()]
+        extra_rate_raw = (request.form.get("extra_rate_per_hour") or "").strip()
+        selected_user_id = request.form.get("selected_user_id", type=int)
+
+        if not title:
+            flash("Special case title is required.", "danger")
+            return redirect(url_for("admin_clock", user_id=selected_user_id) if selected_user_id else url_for("admin_clock"))
+        if not work_date_raw:
+            flash("Special case date is required.", "danger")
+            return redirect(url_for("admin_clock", user_id=selected_user_id) if selected_user_id else url_for("admin_clock"))
+        try:
+            work_date = datetime.strptime(work_date_raw, "%Y-%m-%d").date()
+        except ValueError:
+            flash("Special case date is invalid.", "danger")
+            return redirect(url_for("admin_clock", user_id=selected_user_id) if selected_user_id else url_for("admin_clock"))
+        if scope_type not in {"all", "contract_model", "user", "users"}:
+            flash("Special case scope is invalid.", "danger")
+            return redirect(url_for("admin_clock", user_id=selected_user_id) if selected_user_id else url_for("admin_clock"))
+        try:
+            extra_rate_per_hour = float(extra_rate_raw)
+        except ValueError:
+            flash("Extra rate per hour must be a number.", "danger")
+            return redirect(url_for("admin_clock", user_id=selected_user_id) if selected_user_id else url_for("admin_clock"))
+        if extra_rate_per_hour < 0:
+            flash("Extra rate per hour cannot be negative.", "danger")
+            return redirect(url_for("admin_clock", user_id=selected_user_id) if selected_user_id else url_for("admin_clock"))
+
+        if scope_type == "contract_model":
+            if not contract_model_id or not ContractModel.query.get(contract_model_id):
+                flash("Choose a contract model for this boss instruction.", "danger")
+                return redirect(url_for("admin_clock", user_id=selected_user_id) if selected_user_id else url_for("admin_clock"))
+            user_id = None
+        elif scope_type in {"user", "users"}:
+            if user_id and user_id not in user_ids:
+                user_ids.append(user_id)
+            valid_users = User.query.filter(User.id.in_(user_ids), User.active.is_(True)).all() if user_ids else []
+            valid_users = sorted(valid_users, key=lambda u: u.full_name.lower())
+            valid_user_ids = [user.id for user in valid_users]
+            if not valid_user_ids:
+                flash("Please select at least one user for this special case.", "danger")
+                return redirect(url_for("admin_clock", user_id=selected_user_id) if selected_user_id else url_for("admin_clock"))
+            user_id = valid_user_ids[0]
+            user_ids_value = ",".join(str(uid) for uid in valid_user_ids)
+            scope_type = "user"
+            contract_model_id = None
+        else:
+            contract_model_id = None
+            user_id = None
+            user_ids_value = None
+
+        if scope_type != "user":
+            user_ids_value = None
+
+        db.session.add(ClockExtraInstruction(
+            title=title,
+            description=description,
+            work_date=work_date,
+            scope_type=scope_type,
+            contract_model_id=contract_model_id,
+            user_id=user_id,
+            user_ids=user_ids_value,
+            extra_rate_per_hour=extra_rate_per_hour,
+            active=True,
+            created_by="admin",
+        ))
+        db.session.commit()
+        if scope_type == "user":
+            if len(valid_users) == 1:
+                flash(f"Special case saved for {valid_users[0].full_name}.", "success")
+            else:
+                flash(f"Special case saved for {len(valid_users)} users.", "success")
+        else:
+            flash("Special case saved.", "success")
+        return redirect(url_for("admin_clock", user_id=selected_user_id) if selected_user_id else url_for("admin_clock"))
+
+    @app.post("/admin/clock/instruction/deactivate/<int:instruction_id>")
+    @admin_required
+    def admin_clock_instruction_deactivate(instruction_id):
+        selected_user_id = request.form.get("selected_user_id", type=int)
+        instruction = ClockExtraInstruction.query.get_or_404(instruction_id)
+        instruction.active = False
+        db.session.commit()
+        flash("Special case deactivated.", "success")
+        return redirect(url_for("admin_clock", user_id=selected_user_id) if selected_user_id else url_for("admin_clock"))
+
+    @app.post("/admin/clock/import")
+    @admin_required
+    def admin_clock_import():
+        upload = request.files.get("clock_file")
+        if not upload or not upload.filename:
+            flash("Please choose an Excel file to import.", "danger")
+            return redirect(url_for("admin_clock"))
+
+        try:
+            summary = import_clock_workbook(upload)
+        except ImportError:
+            flash("openpyxl is required for Excel import. Run: pip install -r requirements.txt", "danger")
+            return redirect(url_for("admin_clock"))
+        except Exception as exc:
+            flash(f"Clock import failed: {exc}", "danger")
+            return redirect(url_for("admin_clock"))
+
+        unmatched_names = ", ".join(sorted(summary["unmatched"].keys())[:8])
+        unmatched_note = f" Unmatched users: {unmatched_names}." if unmatched_names else ""
+        flash(
+            "Clock import complete: "
+            f"{summary['imported']} imported, {summary['updated']} updated, "
+            f"{summary['skipped']} skipped.{unmatched_note}",
+            "success",
+        )
+        return redirect(url_for("admin_clock"))
+
+    @app.post("/admin/clock/assign-contract")
+    @admin_required
+    def admin_clock_assign_contract():
+        user_id = request.form.get("user_id", type=int)
+        contract_model_id = request.form.get("contract_model_id", type=int)
+        hourly_rate_raw = request.form.get("hourly_rate") or "0"
+
+        user = User.query.get_or_404(user_id)
+        contract_model = ContractModel.query.get_or_404(contract_model_id)
+        try:
+            hourly_rate = max(float(hourly_rate_raw), 0.0)
+        except ValueError:
+            hourly_rate = 0.0
+
+        for assignment in UserContractAssignment.query.filter_by(user_id=user.id, active=True).all():
+            assignment.active = False
+
+        db.session.add(UserContractAssignment(
+            user=user,
+            contract_model=contract_model,
+            hourly_rate=hourly_rate,
+            active=True,
+        ))
+        db.session.commit()
+        flash(f"Assigned {user.full_name} to {contract_model.name}.", "success")
+        return redirect(url_for("admin_clock", user_id=user.id))
+
+    @app.post("/admin/clock/set-rate")
+    @admin_required
+    def admin_clock_set_rate():
+        user_id = request.form.get("user_id", type=int)
+        hourly_rate_raw = request.form.get("hourly_rate") or "0"
+        assignment = get_active_assignment(user_id)
+        if not assignment:
+            flash("Assign a contract model before setting an hourly rate.", "warning")
+            return redirect(url_for("admin_clock", user_id=user_id))
+
+        try:
+            assignment.hourly_rate = max(float(hourly_rate_raw), 0.0)
+        except ValueError:
+            assignment.hourly_rate = 0.0
+        db.session.commit()
+        flash("Hourly rate updated.", "success")
+        return redirect(url_for("admin_clock", user_id=user_id))
     
     @app.get("/admin/schedules")
     @admin_required

@@ -1,0 +1,297 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="clock-page">
+  <div class="clock-header">
+    <div>
+      <h1>Clock In & Clock Out</h1>
+      <p class="subtitle">Demo functionality - future expansion</p>
+    </div>
+    <a class="button ghost-link" href="{{ url_for('admin_panel') }}">Back to Admin</a>
+  </div>
+
+  <div class="clock-section-title">
+    <div>
+      <h2>Contract Models</h2>
+      <p class="muted">Select an assigned user to view their demo clock-in / clock-out calculation.</p>
+    </div>
+  </div>
+
+  <section class="contract-model-grid">
+    {% for model in contract_models %}
+    <article class="contract-model-card">
+      <h2>{{ model.name }}</h2>
+      <table class="clock-table compact">
+        <thead>
+          <tr>
+            <th>Day</th>
+            <th>In</th>
+            <th>Out</th>
+            <th>Break</th>
+            <th>Expected</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for day in model.days %}
+          <tr>
+            <td>{{ ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"][day.weekday] }}</td>
+            <td>{{ day.start_time or "-" }}</td>
+            <td>{{ day.end_time or "-" }}</td>
+            <td>{{ day.break_minutes }}m</td>
+            <td>{% if day.is_flat_pay %}flat pay{% else %}{{ day.expected_minutes|minutes }}{% endif %}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+
+      <h3>Assigned users</h3>
+      <div class="clock-user-list">
+        {% for assignment in model.assignments if assignment.active and assignment.user.active %}
+        <a
+          href="{{ url_for('admin_clock', user_id=assignment.user.id) }}"
+          class="clock-user-chip {% if selected_user_id == assignment.user.id %}active{% endif %}"
+        >
+          {{ assignment.user.full_name }}
+        </a>
+        {% else %}
+        <p class="muted">No active users assigned.</p>
+        {% endfor %}
+      </div>
+    </article>
+    {% endfor %}
+  </section>
+
+  <section class="clock-section-card clock-instruction-card">
+    <div class="card-head">
+      <div>
+        <h2>Special Case</h2>
+        <p class="muted">Use this when management asks employees to stay longer and confirms extra payment.</p>
+      </div>
+    </div>
+
+    <form class="clock-instruction-form" method="post" action="{{ url_for('admin_clock_instruction_add') }}">
+      <input type="hidden" name="selected_user_id" value="{{ selected_user_id or '' }}">
+      <label class="clock-form-group">
+        <span>Title</span>
+        <input type="text" name="title" placeholder="e.g. Extra unloading shift" required>
+      </label>
+      <label class="clock-form-group">
+        <span>Date</span>
+        <input type="date" name="work_date" required>
+      </label>
+      <label class="clock-form-group">
+        <span>Applies to</span>
+        <select name="scope_type" id="specialCaseScope" required>
+          <option value="all">All users</option>
+          <option value="contract_model">Contract model</option>
+          <option value="user">Specific users</option>
+        </select>
+      </label>
+      <label class="clock-form-group" id="specialCaseContractGroup">
+        <span>Contract model</span>
+        <select name="contract_model_id">
+          <option value="">choose contract model</option>
+          {% for model in contract_models %}
+          <option value="{{ model.id }}">{{ model.name }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <div class="clock-form-group clock-users-group" id="specialCaseUsersGroup">
+        <span>Users</span>
+        <p class="clock-helper-text">Select one or more users.</p>
+        <div class="clock-checkbox-panel">
+          {% for user in users %}
+          <label class="clock-checkbox-row">
+            <input type="checkbox" name="user_ids" value="{{ user.id }}">
+            <span>{{ user.full_name }}</span>
+          </label>
+          {% endfor %}
+        </div>
+      </div>
+      <label class="clock-form-group">
+        <span>Extra rate per hour</span>
+        <input type="number" name="extra_rate_per_hour" min="0" step="0.01" placeholder="e.g. 8.00" required>
+      </label>
+      <label class="clock-form-group clock-instruction-description">
+        <span>Description</span>
+        <textarea name="description" placeholder="e.g. Boss asked everyone to stay longer and approved extra pay."></textarea>
+      </label>
+      <div class="clock-form-actions">
+        <button class="clock-primary-btn" type="submit">Save Special Case</button>
+      </div>
+    </form>
+
+    <h3>Active special cases</h3>
+    <div class="clock-table-wrap">
+      <table class="clock-instruction-table clock-special-case-table">
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Title</th>
+            <th>Scope</th>
+            <th>Extra rate/hour</th>
+            <th>Description</th>
+            <th>Active</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for instruction in active_instructions %}
+          <tr>
+            <td>{{ instruction.work_date.strftime("%d/%m/%Y") }}</td>
+            <td>{{ instruction.title }}</td>
+            <td><span class="clock-badge clock-badge-muted">{{ instruction|instruction_scope }}</span></td>
+            <td class="clock-money">{{ "%.2f"|format(instruction.extra_rate_per_hour) }}</td>
+            <td>{{ instruction.description or "-" }}</td>
+            <td><span class="clock-badge clock-badge-success">Active</span></td>
+            <td>
+              <form method="post" action="{{ url_for('admin_clock_instruction_deactivate', instruction_id=instruction.id) }}" onsubmit="return confirm('Deactivate this special case?');">
+                <input type="hidden" name="selected_user_id" value="{{ selected_user_id or '' }}">
+                <button class="clock-danger-btn small" type="submit">Deactivate</button>
+              </form>
+            </td>
+          </tr>
+          {% else %}
+          <tr>
+            <td colspan="7" class="muted">No active special cases yet.</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="clock-results">
+    {% if not selected_user_id %}
+      <div class="clock-results-card">
+        <p class="muted">Select a user to view clock-in / clock-out calculations.</p>
+      </div>
+    {% elif not selected_user %}
+      <div class="clock-results-card">
+        <p class="status-warning">Selected user was not found or is inactive.</p>
+      </div>
+    {% elif not current_assignment %}
+      <div class="clock-results-card">
+        <p class="status-warning">No active contract model assigned for this user.</p>
+      </div>
+    {% elif result and result.record_count == 0 %}
+      <div class="clock-results-card">
+        <h2>{{ selected_user.full_name }}</h2>
+        <p class="muted">No clock records found for this user in the selected demo period.</p>
+      </div>
+    {% elif result %}
+      <div class="clock-results-card">
+        <h2>Calculation Results for {{ result.user.full_name }}</h2>
+        <p class="muted">
+          Assigned contract model: <strong>{{ current_assignment.contract_model.name }}</strong><br>
+          Demo period: <strong>{{ start_date.strftime("%d/%m/%Y") }} - {{ end_date.strftime("%d/%m/%Y") }}</strong>
+        </p>
+      </div>
+
+      <div class="clock-kpi-grid">
+        <div class="clock-kpi" title="The total hours this user was expected to work during the demo period, based on their assigned contract model. Sundays marked as flat pay are excluded.">
+          <span>Total expected hours</span>
+          <strong>{{ result.summary.total_expected|minutes }}</strong>
+        </div>
+        <div class="clock-kpi" title="The total net hours actually worked from clock-in and clock-out records, after subtracting the scheduled break time for each day.">
+          <span>Total actual net hours</span>
+          <strong>{{ result.summary.total_actual|minutes }}</strong>
+        </div>
+        <div class="clock-kpi" title="The total extra time worked on days where actual net hours were higher than expected contract hours.">
+          <span>Total overtime</span>
+          <strong>{{ result.summary.total_overtime|minutes }}</strong>
+        </div>
+        <div class="clock-kpi" title="The total missing time on days where actual net hours were lower than expected contract hours.">
+          <span>Total less hours</span>
+          <strong>{{ result.summary.total_less|minutes }}</strong>
+        </div>
+        <div class="clock-kpi" title="The final balance of time: total actual net hours minus total expected hours. Negative means the user worked less than expected overall.">
+          <span>Net difference</span>
+          <strong>{{ result.summary.net_difference|minutes }}</strong>
+        </div>
+        <div class="clock-kpi" title="The hourly pay rate stored on this user's active contract assignment. It is used only for the estimated amount owed calculation.">
+          <span>Hourly rate</span>
+          <strong>{{ "%.2f"|format(result.summary.hourly_rate) }}</strong>
+        </div>
+        <div class="clock-kpi" title="Normal estimated payable amount for this demo: max(total overtime minus total less hours, 0) divided by 60, then multiplied by hourly rate.">
+          <span>Normal estimated amount owed</span>
+          <strong>{{ "%.2f"|format(result.summary.owed) }}</strong>
+        </div>
+        <div class="clock-kpi" title="Extra pay from active boss instructions where the user clocked out after the scheduled contract end time.">
+          <span>Special case extra pay</span>
+          <strong>{{ "%.2f"|format(result.summary.boss_extra_pay) }}</strong>
+        </div>
+        <div class="clock-kpi" title="Normal estimated amount owed plus boss-approved extra pay.">
+          <span>Grand estimated amount owed</span>
+          <strong>{{ "%.2f"|format(result.summary.grand_owed) }}</strong>
+        </div>
+      </div>
+
+      <div class="clock-results-card">
+        <h2>Daily Breakdown</h2>
+        <p class="muted">
+          estimated amount owed = max(total overtime minutes - total less minutes, 0) / 60 * hourly rate
+          <br>
+          special case extra pay = approved extra minutes / 60 * extra rate per hour
+        </p>
+        <div class="clock-table-wrap">
+          <table class="clock-table">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Day</th>
+                <th>Expected hours</th>
+                <th>Clock in</th>
+                <th>Clock out</th>
+                <th>Actual net hours</th>
+                <th>Overtime</th>
+                <th>Less hours</th>
+                <th>Net difference</th>
+                <th>Special case</th>
+                <th>Approved extra</th>
+                <th>Extra pay</th>
+                <th>Notes/status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for row in result.rows %}
+              <tr>
+                <td>{{ row.date.strftime("%d/%m/%Y") }}</td>
+                <td>{{ row.day }}</td>
+                <td>{{ row.expected|minutes }}</td>
+                <td>{{ row.clock_in or "-" }}</td>
+                <td>{{ row.clock_out or "-" }}</td>
+                <td>{{ row.actual_net|minutes }}</td>
+                <td>{{ row.overtime|minutes }}</td>
+                <td>{{ row.less|minutes }}</td>
+                <td>{{ row.difference|minutes }}</td>
+                <td>{{ row.boss_instruction }}</td>
+                <td>{{ row.boss_extra_minutes|minutes }}</td>
+                <td class="clock-money">{{ "%.2f"|format(row.boss_extra_pay) }}</td>
+                <td><span class="{{ row.status_class }}">{{ row.status }}</span></td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    {% endif %}
+  </section>
+</div>
+
+<script>
+  (function () {
+    const scope = document.getElementById("specialCaseScope");
+    const contractGroup = document.getElementById("specialCaseContractGroup");
+    const usersGroup = document.getElementById("specialCaseUsersGroup");
+    if (!scope || !contractGroup || !usersGroup) return;
+
+    function syncSpecialCaseScope() {
+      contractGroup.style.display = scope.value === "contract_model" ? "" : "none";
+      usersGroup.style.display = scope.value === "user" ? "" : "none";
+    }
+
+    scope.addEventListener("change", syncSpecialCaseScope);
+    syncSpecialCaseScope();
+  })();
+</script>
+{% endblock %}

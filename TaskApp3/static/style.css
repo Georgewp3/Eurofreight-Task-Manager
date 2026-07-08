@@ -24,7 +24,7 @@ body{margin:0;font-family:Inter,Segoe UI,system-ui,Arial,sans-serif;background:#
 .card{background:#fff;border-radius:14px;padding:16px;box-shadow:0 8px 30px rgba(2,8,23,.08)}
 .card h2{margin-top:0;font-size:1.05rem}
 
-select,input[type=text],input[type=password],textarea{
+select,input[type=text],input[type=password],input[type=date],input[type=number],input[type=file],textarea{
   width:100%;padding:12px;border:1px solid #d1d5db;border-radius:10px;background:#fff;outline:none
 }
 textarea{min-height:90px;resize:vertical}
@@ -338,4 +338,497 @@ button.small,.button.small{padding:6px 10px;font-size:.9rem}
 .kpi-value { font-size: 1.6rem; font-weight: 700; margin-top: 4px; }
 @media (max-width: 900px) {
   .kpi-grid { grid-template-columns: repeat(2, minmax(140px, 1fr)); }
+}
+
+/* --- Clock In & Clock Out demo --- */
+.clock-page{
+  display:flex;
+  flex-direction:column;
+  gap:16px;
+}
+.clock-header{
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-start;
+  gap:16px;
+}
+.clock-header h1{
+  margin:0 0 6px;
+  font-size:1.6rem;
+}
+.clock-header .subtitle{
+  margin:0;
+  color:#64748b;
+}
+.clock-grid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:16px;
+  margin-bottom:16px;
+}
+.clock-card{
+  background:#fff;
+  border:1px solid #e5e7eb;
+  border-radius:14px;
+  padding:16px;
+  box-shadow:0 8px 30px rgba(2,8,23,.08);
+  margin-bottom:16px;
+}
+.clock-card h2{
+  margin:0 0 10px;
+  font-size:1.1rem;
+}
+.clock-form-grid{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(150px,1fr));
+  gap:12px;
+  align-items:end;
+}
+.clock-form-grid label span{
+  display:block;
+  color:#475569;
+  font-size:.9rem;
+  margin-bottom:6px;
+}
+.clock-kpi-grid{
+  display:grid;
+  grid-template-columns:repeat(6,minmax(135px,1fr));
+  gap:12px;
+  margin:16px 0;
+}
+.clock-kpi{
+  background:linear-gradient(180deg,#fff,#f8fafc);
+  border:1px solid #e2e8f0;
+  border-radius:14px;
+  padding:14px;
+}
+.clock-kpi span{
+  display:block;
+  color:#64748b;
+  font-size:.86rem;
+}
+.clock-kpi strong{
+  display:block;
+  margin-top:5px;
+  font-size:1.35rem;
+}
+.contract-model-grid{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(260px,1fr));
+  gap:14px;
+}
+.contract-model-card{
+  border:1px solid #e5e7eb;
+  border-radius:12px;
+  padding:12px;
+  background:#f8fafc;
+}
+.contract-model-card h3{
+  margin:0 0 10px;
+}
+.contract-model-card h2{
+  margin:0 0 10px;
+  font-size:1.1rem;
+}
+.contract-model-card h4{
+  margin:14px 0 6px;
+}
+.contract-model-card h3{
+  margin:14px 0 8px;
+  font-size:.95rem;
+}
+.contract-user-list{
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
+  margin-top:8px;
+}
+.clock-user-chip{
+  display:inline-flex;
+  align-items:center;
+  border:1px solid #cbd5e1;
+  border-radius:999px;
+  background:#fff;
+  color:#0f172a;
+  padding:7px 10px;
+  text-decoration:none;
+  font-size:.9rem;
+  font-weight:700;
+}
+.clock-user-chip:hover{
+  border-color:#22c55e;
+  color:#166534;
+  background:#f0fdf4;
+}
+.clock-user-chip.active{
+  background:#0f172a;
+  border-color:#0f172a;
+  color:#fff;
+}
+.clock-results{
+  display:flex;
+  flex-direction:column;
+  gap:16px;
+}
+.clock-instruction-card{
+  background:#fff;
+  border:1px solid #e5e7eb;
+  border-radius:14px;
+  padding:16px;
+  box-shadow:0 8px 30px rgba(2,8,23,.08);
+}
+.clock-instruction-card h2,
+.clock-instruction-card h3{
+  margin:0 0 10px;
+}
+.clock-instruction-form{
+  display:grid;
+  grid-template-columns:repeat(3,minmax(160px,1fr));
+  gap:12px;
+  align-items:end;
+  margin:14px 0 18px;
+}
+.clock-instruction-form label span{
+  display:block;
+  color:#475569;
+  font-size:.9rem;
+  margin-bottom:6px;
+}
+.clock-instruction-form small{
+  display:block;
+  margin-top:5px;
+}
+.clock-instruction-description{
+  grid-column:span 2;
+}
+.clock-instruction-table{
+  width:100%;
+  border-collapse:collapse;
+  background:#fff;
+}
+.clock-instruction-table th,
+.clock-instruction-table td{
+  border-bottom:1px solid #e5e7eb;
+  padding:9px 10px;
+  text-align:left;
+  vertical-align:top;
+}
+.clock-instruction-table th{
+  background:#f8fafc;
+  color:#334155;
+}
+.clock-scope-badge{
+  display:inline-block;
+  border-radius:999px;
+  padding:3px 8px;
+  background:#eef2ff;
+  color:#3730a3;
+  font-size:.8rem;
+  font-weight:700;
+}
+.clock-money{
+  font-variant-numeric:tabular-nums;
+  font-weight:700;
+}
+.clock-table-wrap{
+  overflow-x:auto;
+}
+.clock-table{
+  width:100%;
+  border-collapse:collapse;
+  background:#fff;
+}
+.clock-table th,
+.clock-table td{
+  border-bottom:1px solid #e5e7eb;
+  padding:9px 10px;
+  text-align:left;
+  vertical-align:top;
+  white-space:nowrap;
+}
+.clock-table th{
+  background:#f8fafc;
+  color:#334155;
+  font-weight:700;
+}
+.clock-table.compact th,
+.clock-table.compact td{
+  padding:6px 7px;
+  font-size:.9rem;
+}
+.status-warning,
+.status-ok{
+  display:inline-block;
+  border-radius:999px;
+  padding:3px 8px;
+  font-size:.8rem;
+  font-weight:700;
+}
+.status-warning{
+  background:#fffbeb;
+  color:#92400e;
+}
+.status-ok{
+  background:#ecfdf5;
+  color:#065f46;
+}
+@media (max-width:1000px){
+  .clock-kpi-grid{grid-template-columns:repeat(3,minmax(135px,1fr))}
+  .contract-model-grid{grid-template-columns:1fr}
+  .clock-instruction-form{grid-template-columns:repeat(2,minmax(160px,1fr))}
+}
+@media (max-width:760px){
+  .clock-header{flex-direction:column}
+  .clock-grid,
+  .clock-form-grid{grid-template-columns:1fr}
+  .clock-kpi-grid{grid-template-columns:repeat(2,minmax(130px,1fr))}
+  .clock-instruction-form{grid-template-columns:1fr}
+  .clock-instruction-description{grid-column:auto}
+}
+
+/* --- Clock page dashboard polish --- */
+.clock-page{
+  gap:18px;
+}
+.clock-header{
+  background:#0f172a;
+  color:#fff;
+  border-radius:14px;
+  padding:18px;
+  box-shadow:0 10px 28px rgba(15,23,42,.16);
+}
+.clock-header .subtitle{
+  color:#cbd5e1;
+}
+.clock-header .button{
+  background:#fff;
+  color:#0f172a;
+}
+.clock-section-title{
+  display:flex;
+  align-items:flex-end;
+  justify-content:space-between;
+  gap:14px;
+}
+.clock-section-title h2{
+  margin:0 0 4px;
+}
+.clock-section-title p{
+  margin:0;
+}
+.clock-section-card,
+.clock-results-card,
+.contract-model-card{
+  background:#fff;
+  border:1px solid #e2e8f0;
+  border-radius:14px;
+  box-shadow:0 8px 28px rgba(15,23,42,.08);
+}
+.contract-model-grid{
+  grid-template-columns:repeat(2,minmax(320px,1fr));
+  gap:16px;
+}
+.contract-model-card{
+  display:flex;
+  flex-direction:column;
+  gap:12px;
+  padding:16px;
+  min-height:100%;
+}
+.contract-model-card h2{
+  color:#0f172a;
+  font-size:1.05rem;
+  margin:0;
+}
+.contract-model-card h3{
+  color:#334155;
+  margin:4px 0 0;
+}
+.clock-user-list{
+  margin-top:auto;
+}
+.clock-user-chip{
+  border-color:#d5dce7;
+  box-shadow:0 1px 2px rgba(15,23,42,.04);
+}
+.clock-user-chip.active{
+  background:#16a34a;
+  border-color:#16a34a;
+  box-shadow:0 6px 16px rgba(22,163,74,.25);
+}
+.clock-instruction-card{
+  padding:18px;
+}
+.clock-instruction-card .card-head{
+  align-items:flex-start;
+  border-bottom:1px solid #e5e7eb;
+  padding-bottom:12px;
+}
+.clock-instruction-card .card-head h2{
+  margin:0 0 4px;
+}
+.clock-instruction-card .card-head p{
+  margin:0;
+}
+.clock-instruction-form{
+  grid-template-columns:repeat(4,minmax(150px,1fr));
+  gap:14px;
+  align-items:start;
+}
+.clock-form-group{
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+}
+.clock-form-group span{
+  color:#334155;
+  font-size:.88rem;
+  font-weight:700;
+}
+.clock-helper-text{
+  margin:0;
+  color:#64748b;
+  font-size:.84rem;
+}
+.clock-instruction-description{
+  grid-column:span 2;
+}
+.clock-users-group{
+  grid-column:span 2;
+}
+.clock-checkbox-panel{
+  max-height:230px;
+  overflow:auto;
+  border:1px solid #d1d5db;
+  border-radius:12px;
+  background:#f8fafc;
+  padding:6px;
+}
+.clock-checkbox-row{
+  display:flex;
+  align-items:center;
+  gap:9px;
+  padding:8px 9px;
+  border-radius:9px;
+  color:#0f172a;
+  cursor:pointer;
+}
+.clock-checkbox-row:hover{
+  background:#eef2ff;
+}
+.clock-checkbox-row input{
+  width:16px;
+  height:16px;
+  margin:0;
+  accent-color:#16a34a;
+}
+.clock-form-actions{
+  display:flex;
+  align-items:flex-end;
+  justify-content:flex-end;
+  height:100%;
+}
+.clock-primary-btn,
+.clock-secondary-btn,
+.clock-danger-btn{
+  border:none;
+  border-radius:10px;
+  padding:10px 14px;
+  cursor:pointer;
+  text-decoration:none;
+  display:inline-block;
+  font-weight:700;
+}
+.clock-primary-btn{
+  background:#16a34a;
+  color:#fff;
+}
+.clock-secondary-btn{
+  background:#0f172a;
+  color:#fff;
+}
+.clock-danger-btn{
+  background:#fee2e2;
+  color:#991b1b;
+}
+.clock-danger-btn:hover{
+  background:#fecaca;
+}
+.clock-badge{
+  display:inline-flex;
+  align-items:center;
+  border-radius:999px;
+  padding:3px 8px;
+  font-size:.78rem;
+  font-weight:800;
+}
+.clock-badge-success{
+  background:#dcfce7;
+  color:#166534;
+}
+.clock-badge-warning{
+  background:#fef3c7;
+  color:#92400e;
+}
+.clock-badge-muted{
+  background:#eef2ff;
+  color:#3730a3;
+}
+.clock-special-case-table,
+.clock-table{
+  border:1px solid #e5e7eb;
+  border-radius:12px;
+  overflow:hidden;
+}
+.clock-special-case-table th,
+.clock-table th{
+  background:#f1f5f9;
+  color:#334155;
+  font-size:.84rem;
+}
+.clock-special-case-table td,
+.clock-table td{
+  color:#0f172a;
+}
+.clock-results-card{
+  padding:16px;
+}
+.clock-results-card h2{
+  margin:0 0 8px;
+}
+.clock-kpi-grid{
+  grid-template-columns:repeat(auto-fit,minmax(170px,1fr));
+  margin:0;
+}
+.clock-kpi{
+  min-height:92px;
+}
+.clock-kpi strong{
+  color:#020617;
+}
+@media (max-width:1000px){
+  .contract-model-grid,
+  .clock-instruction-form{
+    grid-template-columns:1fr 1fr;
+  }
+  .clock-users-group,
+  .clock-instruction-description{
+    grid-column:span 2;
+  }
+}
+@media (max-width:700px){
+  .contract-model-grid,
+  .clock-instruction-form{
+    grid-template-columns:1fr;
+  }
+  .clock-users-group,
+  .clock-instruction-description{
+    grid-column:auto;
+  }
+  .clock-form-actions{
+    justify-content:stretch;
+  }
+  .clock-primary-btn{
+    width:100%;
+  }
 }

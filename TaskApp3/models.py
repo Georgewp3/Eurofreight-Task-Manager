@@ -116,3 +116,92 @@ class OvertimeTotal(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_name = db.Column(db.String(255), nullable=False, unique=True)
     total_hours = db.Column(db.Float, nullable=False, default=0.0)
+
+
+class ContractModel(db.Model):
+    __tablename__ = "contract_models"
+
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(120), unique=True, nullable=False)
+    description = db.Column(db.String(255), nullable=True)
+    active = db.Column(db.Boolean, default=True, nullable=False)
+
+    days = db.relationship(
+        "ContractModelDay",
+        backref="contract_model",
+        cascade="all, delete-orphan",
+        order_by="ContractModelDay.weekday",
+    )
+    assignments = db.relationship(
+        "UserContractAssignment",
+        backref="contract_model",
+        cascade="all, delete-orphan",
+    )
+
+
+class ContractModelDay(db.Model):
+    __tablename__ = "contract_model_days"
+    __table_args__ = (
+        db.UniqueConstraint("contract_model_id", "weekday", name="uq_contract_day"),
+    )
+
+    id = db.Column(db.Integer, primary_key=True)
+    contract_model_id = db.Column(db.Integer, db.ForeignKey("contract_models.id"), nullable=False)
+    weekday = db.Column(db.Integer, nullable=False)  # Monday = 0, Sunday = 6
+    start_time = db.Column(db.String(5), nullable=True)
+    end_time = db.Column(db.String(5), nullable=True)
+    break_minutes = db.Column(db.Integer, default=0, nullable=False)
+    expected_minutes = db.Column(db.Integer, default=0, nullable=False)
+    is_flat_pay = db.Column(db.Boolean, default=False, nullable=False)
+
+
+class UserContractAssignment(db.Model):
+    __tablename__ = "user_contract_assignments"
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
+    contract_model_id = db.Column(db.Integer, db.ForeignKey("contract_models.id"), nullable=False)
+    hourly_rate = db.Column(db.Float, default=0.0, nullable=False)
+    active = db.Column(db.Boolean, default=True, nullable=False)
+    effective_from = db.Column(db.Date, nullable=True)
+    effective_to = db.Column(db.Date, nullable=True)
+
+    user = db.relationship("User", backref="contract_assignments")
+
+
+class ClockRecord(db.Model):
+    __tablename__ = "clock_records"
+    __table_args__ = (
+        db.UniqueConstraint("user_id", "work_date", name="uq_clock_user_date"),
+    )
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
+    work_date = db.Column(db.Date, nullable=False)
+    clock_in = db.Column(db.String(5), nullable=True)
+    clock_out = db.Column(db.String(5), nullable=True)
+    source = db.Column(db.String(120), nullable=True)
+    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+
+    user = db.relationship("User", backref="clock_records")
+
+
+class ClockExtraInstruction(db.Model):
+    __tablename__ = "clock_extra_instructions"
+
+    id = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.String(200), nullable=False)
+    description = db.Column(db.Text, nullable=True)
+    work_date = db.Column(db.Date, nullable=False)
+    scope_type = db.Column(db.String(40), nullable=False)  # all, contract_model, user
+    contract_model_id = db.Column(db.Integer, db.ForeignKey("contract_models.id"), nullable=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True)
+    user_ids = db.Column(db.Text, nullable=True)  # comma-separated ids for multi-user special cases
+    extra_rate_per_hour = db.Column(db.Float, default=0.0, nullable=False)
+    active = db.Column(db.Boolean, default=True, nullable=False)
+    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    created_by = db.Column(db.String(120), nullable=True)
+    notes = db.Column(db.Text, nullable=True)
+
+    contract_model = db.relationship("ContractModel")
+    user = db.relationship("User")
